@@ -7,13 +7,15 @@
 				<span class="text-sm font-semibold text-ink-gray-9">{{ __("ERPbio Tax") }}</span>
 			</div>
 			<nav class="flex-1 overflow-y-auto p-2">
-				<div class="mb-1 px-2 pt-2 text-[11px] font-medium uppercase text-ink-gray-4">{{ __("e-Faktur") }}</div>
-				<RouterLink v-for="item in NAV" :key="item.route" :to="{ name: item.route }"
-					class="flex items-center gap-2.5 rounded px-2 py-1.5 text-sm"
-					:class="isActive(item) ? 'bg-surface-gray-2 font-medium text-ink-gray-9' : 'text-ink-gray-6 hover:bg-surface-gray-1'">
-					<FeatherIcon :name="item.icon" class="h-4 w-4" />
-					{{ __(item.label) }}
-				</RouterLink>
+				<template v-for="group in NAV" :key="group.label">
+					<div class="mb-1 px-2 pt-2 text-[11px] font-medium uppercase text-ink-gray-4">{{ __(group.label) }}</div>
+					<RouterLink v-for="item in group.items" :key="item.route" :to="{ name: item.route }"
+						class="flex items-center gap-2.5 rounded px-2 py-1.5 text-sm"
+						:class="isActive(item) ? 'bg-surface-gray-2 font-medium text-ink-gray-9' : 'text-ink-gray-6 hover:bg-surface-gray-1'">
+						<FeatherIcon :name="item.icon" class="h-4 w-4" />
+						{{ __(item.label) }}
+					</RouterLink>
+				</template>
 			</nav>
 			<div class="border-t p-2">
 				<button class="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-sm text-ink-gray-6 hover:bg-surface-gray-1" @click="session.logout()">
@@ -39,10 +41,29 @@ const __ = inject("$translate")
 const route = useRoute()
 
 const NAV = [
-	{ label: "Exports", route: "ExportList", icon: "upload", match: "/exports" },
-	{ label: "Imports", route: "ImportList", icon: "download", match: "/imports" },
-	{ label: "PPN Keluaran", route: "PpnKeluaran", icon: "bar-chart-2", match: "/reports/ppn-keluaran" },
-	{ label: "Settings", route: "Settings", icon: "settings", match: "/settings" },
+	{
+		label: "e-Faktur",
+		items: [
+			{ label: "Exports", route: "ExportList", icon: "upload", match: "/exports" },
+			{ label: "Imports", route: "ImportList", icon: "download", match: "/imports" },
+		],
+	},
+	{
+		label: "PPN",
+		items: [
+			{ label: "PPN Keluaran", route: "PpnKeluaran", icon: "bar-chart-2", match: "/reports/ppn-keluaran" },
+			{ label: "PPN Masukan", route: "PpnMasukan", icon: "bar-chart", match: "/reports/ppn-masukan" },
+			{ label: "SPT Masa", route: "SptMasa", icon: "clipboard", match: "/reports/spt-masa" },
+		],
+	},
+	{
+		label: "Withholding",
+		items: [{ label: "Bukti Potong", route: "BuktiPotong", icon: "file-minus", match: "/bukti-potong" }],
+	},
+	{
+		label: "Setup",
+		items: [{ label: "Settings", route: "Settings", icon: "settings", match: "/settings" }],
+	},
 ]
 
 function isActive(item) {

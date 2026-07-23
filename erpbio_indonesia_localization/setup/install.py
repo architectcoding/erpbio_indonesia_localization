@@ -104,6 +104,53 @@ CUSTOM_FIELDS = {
 			"description": "Blank = looked up from a Coretax Unit mapped to this item's stock UOM.",
 		},
 	],
+	"Purchase Invoice": [
+		{
+			"fieldname": "eil_efaktur_section",
+			"label": "e-Faktur Masukan (Input VAT)",
+			"fieldtype": "Section Break",
+			"insert_after": "tax_id",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "eil_faktur_number",
+			"label": "Nomor Faktur Pajak (Supplier)",
+			"fieldtype": "Data",
+			"insert_after": "eil_efaktur_section",
+			"description": "The faktur number on the supplier's e-Faktur — the evidence for the input-VAT credit.",
+		},
+		{
+			"fieldname": "eil_faktur_date",
+			"label": "Tanggal Faktur Pajak",
+			"fieldtype": "Date",
+			"insert_after": "eil_faktur_number",
+		},
+		{
+			"fieldname": "eil_efaktur_col",
+			"fieldtype": "Column Break",
+			"insert_after": "eil_faktur_date",
+		},
+		{
+			"fieldname": "eil_ppn_amount",
+			"label": "PPN Masukan Override",
+			"fieldtype": "Currency",
+			"insert_after": "eil_efaktur_col",
+			"description": "Blank = the invoice's total taxes. Set it when the faktur's PPN differs.",
+		},
+		{
+			"fieldname": "eil_creditable",
+			"label": "Creditable (Dapat Dikreditkan)",
+			"fieldtype": "Check",
+			"default": "1",
+			"insert_after": "eil_ppn_amount",
+		},
+		{
+			"fieldname": "eil_exclude",
+			"label": "Exclude from PPN Masukan",
+			"fieldtype": "Check",
+			"insert_after": "eil_creditable",
+		},
+	],
 	"Sales Invoice": [
 		{
 			"fieldname": "eil_efaktur_section",

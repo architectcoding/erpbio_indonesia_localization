@@ -9,6 +9,9 @@ const routes = [
 	{ path: "/imports", name: "ImportList", component: () => import("@/pages/ImportList.vue") },
 	{ path: "/imports/:name", name: "ImportDetail", component: () => import("@/pages/ImportDetail.vue"), props: true },
 	{ path: "/reports/ppn-keluaran", name: "PpnKeluaran", component: () => import("@/pages/PpnKeluaran.vue") },
+	{ path: "/reports/ppn-masukan", name: "PpnMasukan", component: () => import("@/pages/PpnMasukan.vue") },
+	{ path: "/reports/spt-masa", name: "SptMasa", component: () => import("@/pages/SptMasa.vue") },
+	{ path: "/bukti-potong", name: "BuktiPotong", component: () => import("@/pages/BuktiPotong.vue") },
 	{ path: "/settings", name: "Settings", component: () => import("@/pages/Settings.vue") },
 ]
 

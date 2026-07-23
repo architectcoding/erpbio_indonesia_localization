@@ -279,3 +279,132 @@ msgstr "Nomor Faktur"
 
 msgid "e-Faktur Status"
 msgstr "Status e-Faktur"
+
+msgid "PPN"
+msgstr "PPN"
+
+msgid "PPN Masukan"
+msgstr "PPN Masukan"
+
+msgid "The period's input-VAT register: supplier fakturs and the creditable PPN."
+msgstr "Register PPN masukan periode: faktur pemasok dan PPN yang dapat dikreditkan."
+
+msgid "PPN Masukan (creditable)"
+msgstr "PPN Masukan (dapat dikreditkan)"
+
+msgid "Supplier"
+msgstr "Pemasok"
+
+msgid "NPWP Penjual"
+msgstr "NPWP Penjual"
+
+msgid "Creditable"
+msgstr "Dapat Dikreditkan"
+
+msgid "Yes"
+msgstr "Ya"
+
+msgid "No"
+msgstr "Tidak"
+
+msgid "No purchase invoices in this period."
+msgstr "Tidak ada faktur pembelian pada periode ini."
+
+msgid "Tanggal Faktur"
+msgstr "Tanggal Faktur"
+
+msgid "SPT Masa"
+msgstr "SPT Masa"
+
+msgid "SPT Masa PPN"
+msgstr "SPT Masa PPN"
+
+msgid "The month's VAT position: PPN Keluaran minus creditable PPN Masukan."
+msgstr "Posisi PPN bulan berjalan: PPN Keluaran dikurangi PPN Masukan yang dapat dikreditkan."
+
+msgid "Masa (Month)"
+msgstr "Masa (Bulan)"
+
+msgid "invoices"
+msgstr "faktur"
+
+msgid "View register"
+msgstr "Lihat register"
+
+msgid "Kurang Bayar (to pay)"
+msgstr "Kurang Bayar (harus disetor)"
+
+msgid "Lebih Bayar (overpaid / carry forward)"
+msgstr "Lebih Bayar (kompensasi ke masa berikutnya)"
+
+msgid "Figures follow the registers above — reconcile against Coretax before filing."
+msgstr "Angka mengikuti register di atas — rekonsiliasikan dengan Coretax sebelum lapor."
+
+msgid "Withholding"
+msgstr "Pemotongan"
+
+msgid "Setup"
+msgstr "Pengaturan"
+
+msgid "Bukti Potong"
+msgstr "Bukti Potong"
+
+msgid "New Bukti Potong"
+msgstr "Bukti Potong Baru"
+
+msgid "Withholding certificates from customers who withheld PPh (e.g. a government bendahara withholding PPh 22). Track them from Expected to Received — the certificate is your prepaid-tax credit evidence."
+msgstr "Bukti potong dari pelanggan yang memotong PPh (mis. bendahara pemerintah memotong PPh 22). Lacak dari Diharapkan sampai Diterima — bukti potong adalah dasar kredit pajak dibayar dimuka Anda."
+
+msgid "Total Withheld"
+msgstr "Total Dipotong"
+
+msgid "Received"
+msgstr "Diterima"
+
+msgid "Still Expected"
+msgstr "Masih Diharapkan"
+
+msgid "Type"
+msgstr "Jenis"
+
+msgid "Gross"
+msgstr "Bruto"
+
+msgid "Withheld"
+msgstr "Dipotong"
+
+msgid "BP Number"
+msgstr "Nomor BP"
+
+msgid "No withholding certificates yet."
+msgstr "Belum ada bukti potong."
+
+msgid "Customer (Pemotong)"
+msgstr "Pelanggan (Pemotong)"
+
+msgid "Tax Type"
+msgstr "Jenis Pajak"
+
+msgid "Rate (%)"
+msgstr "Tarif (%)"
+
+msgid "Gross Amount (DPP)"
+msgstr "Jumlah Bruto (DPP)"
+
+msgid "Tax Withheld (blank = Gross × Rate)"
+msgstr "Pajak Dipotong (kosong = Bruto × Tarif)"
+
+msgid "Bukti Potong Number"
+msgstr "Nomor Bukti Potong"
+
+msgid "Bukti Potong Date"
+msgstr "Tanggal Bukti Potong"
+
+msgid "Fills = Received"
+msgstr "Terisi = Diterima"
+
+msgid "Notes"
+msgstr "Catatan"
+
+msgid "Expected"
+msgstr "Diharapkan"

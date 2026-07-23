@@ -1,0 +1,181 @@
+{
+ "actions": [],
+ "autoname": "format:BP-{YYYY}-{#####}",
+ "creation": "2026-07-23 12:00:00.000000",
+ "description": "A withholding certificate (Bukti Potong) received from a customer who withheld PPh from a payment — commonly a government bendahara withholding PPh 22. Track it from Expected to Received; the received certificate is the evidence for the prepaid-tax credit.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "customer",
+  "tax_type",
+  "col_0",
+  "sales_invoice",
+  "payment_entry",
+  "status",
+  "section_amounts",
+  "gross_amount",
+  "rate",
+  "col_1",
+  "tax_amount",
+  "section_certificate",
+  "bp_number",
+  "bp_date",
+  "col_2",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer (Pemotong)",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "default": "PPh 22",
+   "fieldname": "tax_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Tax Type",
+   "options": "PPh 22\nPPh 23\nPPh 4(2)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_0",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Payment Entry",
+   "options": "Payment Entry"
+  },
+  {
+   "default": "Expected",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Expected\nReceived",
+   "read_only": 1,
+   "description": "Becomes Received automatically when the certificate number is filled."
+  },
+  {
+   "fieldname": "section_amounts",
+   "fieldtype": "Section Break",
+   "label": "Amounts"
+  },
+  {
+   "fieldname": "gross_amount",
+   "fieldtype": "Currency",
+   "label": "Gross Amount (DPP)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "rate",
+   "fieldtype": "Percent",
+   "label": "Rate (%)",
+   "description": "PPh 22 bendahara 1.5% · PPh 23 services 2% · PPh 4(2) per its own rules."
+  },
+  {
+   "fieldname": "col_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tax_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Tax Withheld",
+   "description": "Blank = Gross × Rate."
+  },
+  {
+   "fieldname": "section_certificate",
+   "fieldtype": "Section Break",
+   "label": "Certificate"
+  },
+  {
+   "fieldname": "bp_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Bukti Potong Number"
+  },
+  {
+   "fieldname": "bp_date",
+   "fieldtype": "Date",
+   "label": "Bukti Potong Date"
+  },
+  {
+   "fieldname": "col_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "links": [],
+ "modified": "2026-07-23 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPbio Indonesia Localization",
+ "name": "Bukti Potong",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

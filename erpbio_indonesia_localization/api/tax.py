@@ -111,6 +111,105 @@ def ppn_keluaran(company, from_date, to_date):
 	return {"columns": get_columns(), "data": get_data(filters)}
 
 
+@frappe.whitelist()
+def ppn_masukan(company, from_date, to_date):
+	_check("Purchase Invoice")
+	from erpbio_indonesia_localization.erpbio_indonesia_localization.report.ppn_masukan.ppn_masukan import (
+		get_columns,
+		get_data,
+	)
+
+	filters = frappe._dict({"company": company, "from_date": from_date, "to_date": to_date})
+	return {"columns": get_columns(), "data": get_data(filters)}
+
+
+@frappe.whitelist()
+def spt_masa(company, from_date, to_date):
+	"""The month's PPN position: Keluaran − creditable Masukan = kurang (pay) /
+	lebih (carry forward) bayar."""
+	_check("Sales Invoice")
+	_check("Purchase Invoice")
+	keluaran = ppn_keluaran(company, from_date, to_date)["data"]
+	masukan = ppn_masukan(company, from_date, to_date)["data"]
+	total_keluaran = sum(flt(r["ppn"]) for r in keluaran)
+	total_masukan = sum(flt(r["ppn"]) for r in masukan if r.get("creditable"))
+	return {
+		"keluaran": total_keluaran,
+		"keluaran_count": len(keluaran),
+		"masukan": total_masukan,
+		"masukan_count": len(masukan),
+		"net": flt(total_keluaran - total_masukan, 2),
+	}
+
+
+# -------------------------------------------------------------- bukti potong
+@frappe.whitelist()
+def list_bukti_potong(start=0, page_length=50):
+	_check("Bukti Potong")
+	return frappe.get_all(
+		"Bukti Potong",
+		fields=[
+			"name",
+			"customer",
+			"tax_type",
+			"sales_invoice",
+			"payment_entry",
+			"gross_amount",
+			"rate",
+			"tax_amount",
+			"bp_number",
+			"bp_date",
+			"status",
+		],
+		order_by="creation desc",
+		start=int(start),
+		page_length=int(page_length),
+	)
+
+
+@frappe.whitelist(methods=["POST"])
+def save_bukti_potong(payload):
+	payload = frappe.parse_json(payload)
+	name = payload.pop("name", None)
+	if name:
+		_check("Bukti Potong", "write")
+		doc = frappe.get_doc("Bukti Potong", name)
+	else:
+		_check("Bukti Potong", "create")
+		doc = frappe.new_doc("Bukti Potong")
+		if not payload.get("company"):
+			payload["company"] = frappe.defaults.get_user_default("Company") or frappe.get_all(
+				"Company", pluck="name", limit=1
+			)[0]
+	for field in (
+		"company",
+		"customer",
+		"tax_type",
+		"sales_invoice",
+		"payment_entry",
+		"gross_amount",
+		"rate",
+		"tax_amount",
+		"bp_number",
+		"bp_date",
+		"notes",
+	):
+		if field in payload:
+			doc.set(field, payload[field])
+	doc.save()
+	return {"name": doc.name, "status": doc.status, "tax_amount": flt(doc.tax_amount)}
+
+
+@frappe.whitelist()
+def bukti_potong_lookups():
+	_check("Bukti Potong")
+	return {
+		"customers": frappe.get_all("Customer", filters={"disabled": 0}, pluck="name", order_by="name"),
+		# common statutory rates offered as defaults; the user can override
+		"default_rates": {"PPh 22": 1.5, "PPh 23": 2.0, "PPh 4(2)": 10.0},
+	}
+
+
 # ------------------------------------------------------------------- imports
 @frappe.whitelist()
 def list_imports(start=0, page_length=20):
