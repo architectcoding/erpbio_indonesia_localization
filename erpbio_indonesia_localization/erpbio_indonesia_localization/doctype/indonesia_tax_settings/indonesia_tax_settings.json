@@ -1,0 +1,98 @@
+{
+ "actions": [],
+ "creation": "2026-07-23 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "efaktur_section",
+  "default_transaction_code",
+  "default_buyer_country",
+  "col_1",
+  "tarif_ppn",
+  "use_dpp_nilai_lain",
+  "dpp_numerator",
+  "dpp_denominator"
+ ],
+ "fields": [
+  {
+   "fieldname": "efaktur_section",
+   "fieldtype": "Section Break",
+   "label": "e-Faktur (Coretax)"
+  },
+  {
+   "fieldname": "default_transaction_code",
+   "fieldtype": "Link",
+   "label": "Default Transaction Code",
+   "options": "Coretax Transaction Code",
+   "description": "Applied to Sales Invoices that don't set one. 01 = normal sale."
+  },
+  {
+   "default": "IDN",
+   "fieldname": "default_buyer_country",
+   "fieldtype": "Data",
+   "label": "Default Buyer Country Code"
+  },
+  {
+   "fieldname": "col_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "12",
+   "fieldname": "tarif_ppn",
+   "fieldtype": "Percent",
+   "label": "Tarif PPN (%)",
+   "description": "Statutory VAT rate stated on the faktur (12% since Jan 2025)."
+  },
+  {
+   "default": "1",
+   "fieldname": "use_dpp_nilai_lain",
+   "fieldtype": "Check",
+   "label": "Use DPP Nilai Lain (PMK 131/2024)",
+   "description": "For non-luxury goods/services: DPP Nilai Lain = 11/12 × selling price, so the 12% rate collects an effective 11%."
+  },
+  {
+   "default": "11",
+   "depends_on": "use_dpp_nilai_lain",
+   "fieldname": "dpp_numerator",
+   "fieldtype": "Int",
+   "label": "DPP Fraction Numerator"
+  },
+  {
+   "default": "12",
+   "depends_on": "use_dpp_nilai_lain",
+   "fieldname": "dpp_denominator",
+   "fieldtype": "Int",
+   "label": "DPP Fraction Denominator"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-07-23 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPbio Indonesia Localization",
+ "name": "Indonesia Tax Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
