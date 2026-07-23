@@ -1,0 +1,95 @@
+{
+ "actions": [],
+ "autoname": "format:CFI-{YYYY}-{#####}",
+ "creation": "2026-07-23 12:00:00.000000",
+ "description": "Reads the faktur list downloaded from Coretax (Excel/CSV) and writes the official faktur numbers, dates and statuses back onto the matching Sales Invoices. Rows are matched by Referensi, which the exporter fills with the Sales Invoice name.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "import_file",
+  "col_0",
+  "status",
+  "section_rows",
+  "rows",
+  "section_summary",
+  "summary"
+ ],
+ "fields": [
+  {
+   "fieldname": "import_file",
+   "fieldtype": "Attach",
+   "label": "Coretax File (Excel/CSV)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_0",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nPreviewed\nApplied",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_rows",
+   "fieldtype": "Section Break",
+   "label": "Rows"
+  },
+  {
+   "fieldname": "rows",
+   "fieldtype": "Table",
+   "label": "Faktur Rows",
+   "options": "Coretax Faktur Import Row"
+  },
+  {
+   "fieldname": "section_summary",
+   "fieldtype": "Section Break",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Small Text",
+   "label": "Summary",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-07-23 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPbio Indonesia Localization",
+ "name": "Coretax Faktur Import",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,22 @@
+{
+	"name": "erpbio-tax-ui",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build --base=/assets/erpbio_indonesia_localization/tax/ && yarn copy-html-entry",
+		"copy-html-entry": "cp ../erpbio_indonesia_localization/public/tax/index.html ../erpbio_indonesia_localization/www/erpbio_tax.html"
+	},
+	"dependencies": {
+		"@vitejs/plugin-vue": "^4.4.0",
+		"autoprefixer": "^10.4.19",
+		"feather-icons": "^4.29.1",
+		"frappe-ui": "0.1.105",
+		"postcss": "^8.4.5",
+		"tailwindcss": "^3.4.3",
+		"vite": "^5.4.10",
+		"vue": "^3.5.12",
+		"vue-router": "^4.3.2"
+	}
+}

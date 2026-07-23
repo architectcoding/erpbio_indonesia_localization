@@ -1,0 +1,87 @@
+{
+ "actions": [],
+ "creation": "2026-07-23 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "referensi",
+  "sales_invoice",
+  "faktur_number",
+  "faktur_date",
+  "djp_status",
+  "mapped_status",
+  "ok",
+  "message"
+ ],
+ "fields": [
+  {
+   "fieldname": "referensi",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Referensi",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Sales Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "faktur_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nomor Faktur",
+   "read_only": 1
+  },
+  {
+   "fieldname": "faktur_date",
+   "fieldtype": "Date",
+   "label": "Tanggal",
+   "read_only": 1
+  },
+  {
+   "fieldname": "djp_status",
+   "fieldtype": "Data",
+   "label": "DJP Status",
+   "read_only": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "mapped_status",
+   "fieldtype": "Data",
+   "label": "Maps To",
+   "read_only": 1,
+   "columns": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "ok",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Valid",
+   "read_only": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Result",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-23 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPbio Indonesia Localization",
+ "name": "Coretax Faktur Import Row",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -18,6 +18,12 @@ required_apps = ["erpnext"]
 after_install = "erpbio_indonesia_localization.setup.install.setup_eil"
 after_migrate = "erpbio_indonesia_localization.setup.install.setup_eil"
 
+# /erpbio-tax SPA (tax-frontend build served from www/erpbio_tax.html)
+website_route_rules = [
+	{"from_route": "/erpbio-tax", "to_route": "erpbio_tax"},
+	{"from_route": "/erpbio-tax/<path:app_path>", "to_route": "erpbio_tax"},
+]
+
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
 # 	{
