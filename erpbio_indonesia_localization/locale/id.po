@@ -1,0 +1,281 @@
+# Indonesian translations for ERPbio Indonesia Localization.
+# Copyright (C) 2026 Architect Coding
+# This file is distributed under the same license as the app.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ERPbio Indonesia Localization\n"
+"Report-Msgid-Bugs-To: jthenadi@gmail.com\n"
+"POT-Creation-Date: 2026-07-23 12:00+0700\n"
+"PO-Revision-Date: 2026-07-23 12:00+0700\n"
+"Last-Translator: jthenadi@gmail.com\n"
+"Language: id\n"
+"Language-Team: jthenadi@gmail.com\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "ERPbio Tax"
+msgstr "ERPbio Pajak"
+
+msgid "e-Faktur"
+msgstr "e-Faktur"
+
+msgid "Exports"
+msgstr "Ekspor"
+
+msgid "Imports"
+msgstr "Impor"
+
+msgid "Settings"
+msgstr "Pengaturan"
+
+msgid "Log Out"
+msgstr "Keluar"
+
+msgid "Sign in to manage e-Faktur compliance."
+msgstr "Masuk untuk mengelola kepatuhan e-Faktur."
+
+msgid "Invalid login. Please try again."
+msgstr "Login tidak valid. Silakan coba lagi."
+
+msgid "Coretax Exports"
+msgstr "Ekspor Coretax"
+
+msgid "New Export"
+msgstr "Ekspor Baru"
+
+msgid "Turn a period's Sales Invoices into the DJP workbook for the official Excel-to-XML converter."
+msgstr "Ubah Faktur Penjualan satu periode menjadi workbook DJP untuk aplikasi konversi Excel-ke-XML resmi."
+
+msgid "Period"
+msgstr "Periode"
+
+msgid "Download"
+msgstr "Unduh"
+
+msgid "No exports yet."
+msgstr "Belum ada ekspor."
+
+msgid "Could not create the export."
+msgstr "Tidak dapat membuat ekspor."
+
+msgid "Fetch Invoices"
+msgstr "Ambil Faktur"
+
+msgid "Generate Coretax File"
+msgstr "Buat Berkas Coretax"
+
+msgid "Generate XML"
+msgstr "Buat XML"
+
+msgid "Direct XML — validate against Coretax before relying on it; the Excel + official converter is the safe route."
+msgstr "XML langsung — validasikan ke Coretax sebelum diandalkan; Excel + konverter resmi adalah jalur aman."
+
+msgid "Validation"
+msgstr "Validasi"
+
+msgid "Run Fetch Invoices to pull this period's Sales Invoices."
+msgstr "Jalankan Ambil Faktur untuk menarik Faktur Penjualan periode ini."
+
+msgid "Export File"
+msgstr "Berkas Ekspor"
+
+msgid "{0} invoices found, {1} valid"
+msgstr "{0} faktur ditemukan, {1} valid"
+
+msgid "Could not fetch invoices."
+msgstr "Tidak dapat mengambil faktur."
+
+msgid "Generated for {0} invoices — feed the file to DJP's Excel-to-XML converter."
+msgstr "Dibuat untuk {0} faktur — masukkan berkas ke konverter Excel-ke-XML DJP."
+
+msgid "Could not generate the file."
+msgstr "Tidak dapat membuat berkas."
+
+msgid "XML generated for {0} invoices — check the first upload against Coretax carefully."
+msgstr "XML dibuat untuk {0} faktur — periksa unggahan pertama ke Coretax dengan cermat."
+
+msgid "Could not generate the XML."
+msgstr "Tidak dapat membuat XML."
+
+msgid "Coretax Imports"
+msgstr "Impor Coretax"
+
+msgid "Import Coretax File"
+msgstr "Impor Berkas Coretax"
+
+msgid "Upload the faktur list downloaded from Coretax to stamp official faktur numbers onto your Sales Invoices."
+msgstr "Unggah daftar faktur yang diunduh dari Coretax untuk menempelkan nomor faktur resmi ke Faktur Penjualan Anda."
+
+msgid "No imports yet."
+msgstr "Belum ada impor."
+
+msgid "Upload failed"
+msgstr "Unggah gagal"
+
+msgid "Could not import the file."
+msgstr "Tidak dapat mengimpor berkas."
+
+msgid "Preview"
+msgstr "Pratinjau"
+
+msgid "Apply to Sales Invoices"
+msgstr "Terapkan ke Faktur Penjualan"
+
+msgid "DJP Status"
+msgstr "Status DJP"
+
+msgid "Result"
+msgstr "Hasil"
+
+msgid "Run Preview to read the file."
+msgstr "Jalankan Pratinjau untuk membaca berkas."
+
+msgid "{0} rows, {1} matched"
+msgstr "{0} baris, {1} cocok"
+
+msgid "Could not read the file."
+msgstr "Tidak dapat membaca berkas."
+
+msgid "Applied to {0} Sales Invoices"
+msgstr "Diterapkan ke {0} Faktur Penjualan"
+
+msgid "Could not apply."
+msgstr "Tidak dapat menerapkan."
+
+msgid "Tax Settings"
+msgstr "Pengaturan Pajak"
+
+msgid "e-Faktur (Coretax)"
+msgstr "e-Faktur (Coretax)"
+
+msgid "Default Transaction Code"
+msgstr "Kode Transaksi Bawaan"
+
+msgid "Default Buyer Country Code"
+msgstr "Kode Negara Pembeli Bawaan"
+
+msgid "Tarif PPN (%)"
+msgstr "Tarif PPN (%)"
+
+msgid "Use DPP Nilai Lain (PMK 131/2024)"
+msgstr "Gunakan DPP Nilai Lain (PMK 131/2024)"
+
+msgid "DPP Fraction Numerator"
+msgstr "Pembilang Pecahan DPP"
+
+msgid "DPP Fraction Denominator"
+msgstr "Penyebut Pecahan DPP"
+
+msgid "With DPP Nilai Lain 11/12 and 12% PPN, the effective rate is 11% — the current treatment for non-luxury goods and services."
+msgstr "Dengan DPP Nilai Lain 11/12 dan PPN 12%, tarif efektifnya 11% — perlakuan saat ini untuk barang/jasa non-mewah."
+
+msgid "Saved."
+msgstr "Tersimpan."
+
+msgid "Could not save."
+msgstr "Tidak dapat menyimpan."
+
+msgid "The period's output-VAT register: DPP, PPN, and each invoice's e-Faktur number and status."
+msgstr "Register PPN keluaran periode: DPP, PPN, serta nomor dan status e-Faktur setiap faktur."
+
+msgid "Run"
+msgstr "Jalankan"
+
+msgid "No invoices in this period."
+msgstr "Tidak ada faktur pada periode ini."
+
+msgid "Could not run the report."
+msgstr "Tidak dapat menjalankan laporan."
+
+msgid "Not Exported"
+msgstr "Belum Diekspor"
+
+msgid "Exported"
+msgstr "Diekspor"
+
+msgid "Approved"
+msgstr "Disetujui"
+
+msgid "Rejected"
+msgstr "Ditolak"
+
+msgid "Previewed"
+msgstr "Dipratinjau"
+
+msgid "Applied"
+msgstr "Diterapkan"
+
+msgid "From Date cannot be after To Date."
+msgstr "Tanggal Mulai tidak boleh setelah Tanggal Akhir."
+
+msgid "No valid invoices — run Fetch Invoices and resolve the validation messages."
+msgstr "Tidak ada faktur valid — jalankan Ambil Faktur dan selesaikan pesan validasinya."
+
+msgid "Company Tax ID (NPWP) is empty"
+msgstr "Tax ID (NPWP) perusahaan kosong"
+
+msgid "currency is {0}, only IDR is supported"
+msgstr "mata uang {0}, hanya IDR yang didukung"
+
+msgid "already {0}"
+msgstr "sudah {0}"
+
+msgid "no transaction code"
+msgstr "tidak ada kode transaksi"
+
+msgid "buyer has no NPWP/NIK (Customer Tax ID)"
+msgstr "pembeli tidak punya NPWP/NIK (Tax ID Pelanggan)"
+
+msgid "no Coretax Unit for {0} (uom {1})"
+msgstr "tidak ada Coretax Unit untuk {0} (satuan {1})"
+
+msgid "Ready"
+msgstr "Siap"
+
+msgid "Could not find the Referensi and Nomor Faktur columns. Upload the faktur list downloaded from Coretax (Excel or CSV)."
+msgstr "Kolom Referensi dan Nomor Faktur tidak ditemukan. Unggah daftar faktur yang diunduh dari Coretax (Excel atau CSV)."
+
+msgid "No data rows found below the header."
+msgstr "Tidak ada baris data di bawah header."
+
+msgid "{0} of {1} rows matched a Sales Invoice."
+msgstr "{0} dari {1} baris cocok dengan Faktur Penjualan."
+
+msgid "no Referensi — cannot match to a Sales Invoice"
+msgstr "tidak ada Referensi — tidak bisa dicocokkan ke Faktur Penjualan"
+
+msgid "no submitted Sales Invoice named {0}"
+msgstr "tidak ada Faktur Penjualan tersubmit bernama {0}"
+
+msgid "row has no faktur number"
+msgstr "baris tidak punya nomor faktur"
+
+msgid "status not final yet — skipped"
+msgstr "status belum final — dilewati"
+
+msgid "will replace faktur number {0}"
+msgstr "akan mengganti nomor faktur {0}"
+
+msgid "Run Preview first."
+msgstr "Jalankan Pratinjau dulu."
+
+msgid "Applied to {0} Sales Invoices."
+msgstr "Diterapkan ke {0} Faktur Penjualan."
+
+msgid "Attach the file downloaded from Coretax first."
+msgstr "Lampirkan dulu berkas yang diunduh dari Coretax."
+
+msgid "Only .xlsx and .csv files are supported."
+msgstr "Hanya berkas .xlsx dan .csv yang didukung."
+
+msgid "NPWP Pembeli"
+msgstr "NPWP Pembeli"
+
+msgid "Nomor Faktur"
+msgstr "Nomor Faktur"
+
+msgid "e-Faktur Status"
+msgstr "Status e-Faktur"

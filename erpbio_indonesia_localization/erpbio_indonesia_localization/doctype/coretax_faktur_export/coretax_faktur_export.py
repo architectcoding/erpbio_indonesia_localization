@@ -64,6 +64,12 @@ def _strip_html(value):
 	return re.sub(r"<[^>]+>", " ", value or "").replace("&amp;", "&").strip()
 
 
+def _num(value):
+	"""12 -> '12', 1833333.33 -> '1833333.33' — plain decimals, no trailing zeros."""
+	text = f"{flt(value):.2f}".rstrip("0").rstrip(".")
+	return text or "0"
+
+
 class CoretaxFakturExport(Document):
 	def validate(self):
 		if getdate(self.from_date) > getdate(self.to_date):
@@ -182,6 +188,28 @@ class CoretaxFakturExport(Document):
 		self.db_set("status", "Generated")
 		return {"file_url": file_doc.file_url, "invoices": len(valid_rows)}
 
+	def _line_values(self, item, settings):
+		"""One invoice line's tax figures, shared by the workbook and the XML."""
+		tarif = flt(settings.tarif_ppn) or 12.0
+		num = settings.dpp_numerator or 11
+		den = settings.dpp_denominator or 12
+		dpp = flt(item.net_amount, 2)
+		dpp_lain = flt(dpp * num / den, 2) if settings.use_dpp_nilai_lain else dpp
+		return {
+			"opt": self._barang_jasa(item),
+			"code": (item.item_code and frappe.db.get_value("Item", item.item_code, "eil_goods_code"))
+			or "000000",
+			"name": item.item_name or item.item_code,
+			"unit": self._resolve_unit(item),
+			"price": flt(item.net_rate, 2),
+			"qty": flt(item.qty, 2),
+			"discount": 0,
+			"dpp": dpp,
+			"dpp_lain": dpp_lain,
+			"tarif": tarif,
+			"ppn": flt(dpp_lain * tarif / 100.0, 2),
+		}
+
 	def _build_workbook(self, valid_rows, settings):
 		import openpyxl
 
@@ -196,11 +224,6 @@ class CoretaxFakturExport(Document):
 		ws_detail.append(DETAIL_HEADERS)
 
 		seller_idtku = self._seller_idtku()
-		tarif = flt(settings.tarif_ppn) or 12.0
-		use_lain = bool(settings.use_dpp_nilai_lain)
-		num = settings.dpp_numerator or 11
-		den = settings.dpp_denominator or 12
-
 		for baris, row in enumerate(valid_rows, start=1):
 			si = frappe.get_doc("Sales Invoice", row.sales_invoice)
 			buyer = self._buyer_bits(si)
@@ -226,24 +249,21 @@ class CoretaxFakturExport(Document):
 				]
 			)
 			for item in si.items:
-				dpp = flt(item.net_amount, 2)
-				dpp_lain = flt(dpp * num / den, 2) if use_lain else dpp
-				ppn = flt(dpp_lain * tarif / 100.0, 2)
+				line = self._line_values(item, settings)
 				ws_detail.append(
 					[
 						baris,
-						self._barang_jasa(item),
-						(item.item_code and frappe.db.get_value("Item", item.item_code, "eil_goods_code"))
-						or "000000",
-						item.item_name or item.item_code,
-						self._resolve_unit(item),
-						flt(item.net_rate, 2),
-						flt(item.qty, 2),
-						0,
-						dpp,
-						dpp_lain,
-						tarif,
-						ppn,
+						line["opt"],
+						line["code"],
+						line["name"],
+						line["unit"],
+						line["price"],
+						line["qty"],
+						line["discount"],
+						line["dpp"],
+						line["dpp_lain"],
+						line["tarif"],
+						line["ppn"],
 						0,
 						0,
 					]
@@ -256,6 +276,92 @@ class CoretaxFakturExport(Document):
 		buf = io.BytesIO()
 		wb.save(buf)
 		return buf.getvalue()
+
+	# ------------------------------------------------------------- direct XML
+	@frappe.whitelist()
+	def generate_xml(self):
+		"""Build the Coretax TaxInvoiceBulk XML directly — the same document
+		DJP's converter produces from the workbook. Element names and order
+		follow the published DJP schema (including its literal 'BuyerAdress'
+		spelling). Validate the first real file against Coretax before relying
+		on this path; the workbook + official converter stays the safe route."""
+		valid_rows = [r for r in self.invoices if r.ok and r.sales_invoice]
+		if not valid_rows:
+			frappe.throw(_("No valid invoices — run Fetch Invoices and resolve the validation messages."))
+
+		settings = frappe.get_single("Indonesia Tax Settings")
+		content = self._build_xml(valid_rows, settings)
+
+		file_doc = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": f"{self.name}-coretax.xml",
+				"attached_to_doctype": self.doctype,
+				"attached_to_name": self.name,
+				"is_private": 1,
+				"content": content,
+			}
+		).insert(ignore_permissions=True)
+
+		for row in valid_rows:
+			frappe.db.set_value(
+				"Sales Invoice", row.sales_invoice, "eil_faktur_status", "Exported", update_modified=False
+			)
+		self.db_set("generated_on", now_datetime())
+		self.db_set("status", "Generated")
+		return {"file_url": file_doc.file_url, "invoices": len(valid_rows)}
+
+	def _build_xml(self, valid_rows, settings):
+		from xml.etree import ElementTree as ET
+
+		root = ET.Element("TaxInvoiceBulk")
+		root.set("xmlns:xsd", "http://www.w3.org/2001/XMLSchema")
+		root.set("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
+		ET.SubElement(root, "TIN").text = self.npwp_penjual
+		invoices_el = ET.SubElement(root, "ListOfTaxInvoice")
+
+		seller_idtku = self._seller_idtku()
+		for row in valid_rows:
+			si = frappe.get_doc("Sales Invoice", row.sales_invoice)
+			buyer = self._buyer_bits(si)
+			inv = ET.SubElement(invoices_el, "TaxInvoice")
+			ET.SubElement(inv, "TaxInvoiceDate").text = str(getdate(si.posting_date))
+			ET.SubElement(inv, "TaxInvoiceOpt").text = "Pengganti" if si.eil_pengganti else "Normal"
+			ET.SubElement(inv, "TrxCode").text = si.eil_kode_transaksi or settings.default_transaction_code
+			ET.SubElement(inv, "AddInfo")
+			ET.SubElement(inv, "CustomDoc")
+			ET.SubElement(inv, "RefDesc").text = si.name
+			ET.SubElement(inv, "FacilityStamp")
+			ET.SubElement(inv, "SellerIDTKU").text = seller_idtku
+			ET.SubElement(inv, "BuyerTin").text = buyer["npwp"]
+			ET.SubElement(inv, "BuyerDocument").text = buyer["id_type"]
+			ET.SubElement(inv, "BuyerCountry").text = buyer["country"]
+			ET.SubElement(inv, "BuyerDocumentNumber").text = buyer["document_number"]
+			ET.SubElement(inv, "BuyerName").text = si.customer_name or si.customer
+			# sic: the DJP schema spells it "BuyerAdress"
+			ET.SubElement(inv, "BuyerAdress").text = _strip_html(si.address_display) or "-"
+			ET.SubElement(inv, "BuyerEmail").text = buyer["email"]
+			ET.SubElement(inv, "BuyerIDTKU").text = buyer["idtku"]
+			goods_el = ET.SubElement(inv, "ListOfGoodService")
+			for item in si.items:
+				line = self._line_values(item, settings)
+				g = ET.SubElement(goods_el, "GoodService")
+				ET.SubElement(g, "Opt").text = line["opt"]
+				ET.SubElement(g, "Code").text = line["code"]
+				ET.SubElement(g, "Name").text = line["name"]
+				ET.SubElement(g, "Unit").text = line["unit"]
+				ET.SubElement(g, "Price").text = _num(line["price"])
+				ET.SubElement(g, "Qty").text = _num(line["qty"])
+				ET.SubElement(g, "TotalDiscount").text = "0"
+				ET.SubElement(g, "TaxBase").text = _num(line["dpp"])
+				ET.SubElement(g, "OtherTaxBase").text = _num(line["dpp_lain"])
+				ET.SubElement(g, "VATRate").text = _num(line["tarif"])
+				ET.SubElement(g, "VAT").text = _num(line["ppn"])
+				ET.SubElement(g, "STLGRate").text = "0"
+				ET.SubElement(g, "STLG").text = "0"
+
+		ET.indent(root)
+		return b'<?xml version="1.0" encoding="utf-8"?>\n' + ET.tostring(root, encoding="utf-8")
 
 	def _seller_idtku(self):
 		nitku = frappe.db.get_value("Company", self.company, "eil_nitku")

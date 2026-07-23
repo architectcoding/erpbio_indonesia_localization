@@ -8,6 +8,7 @@ const routes = [
 	{ path: "/exports/:name", name: "ExportDetail", component: () => import("@/pages/ExportDetail.vue"), props: true },
 	{ path: "/imports", name: "ImportList", component: () => import("@/pages/ImportList.vue") },
 	{ path: "/imports/:name", name: "ImportDetail", component: () => import("@/pages/ImportDetail.vue"), props: true },
+	{ path: "/reports/ppn-keluaran", name: "PpnKeluaran", component: () => import("@/pages/PpnKeluaran.vue") },
 	{ path: "/settings", name: "Settings", component: () => import("@/pages/Settings.vue") },
 ]
 

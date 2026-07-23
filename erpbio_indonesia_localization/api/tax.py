@@ -92,6 +92,25 @@ def generate_export(name):
 	return frappe.get_doc("Coretax Faktur Export", name).generate()
 
 
+@frappe.whitelist(methods=["POST"])
+def generate_export_xml(name):
+	_check("Coretax Faktur Export", "write")
+	return frappe.get_doc("Coretax Faktur Export", name).generate_xml()
+
+
+# ------------------------------------------------------------------- reports
+@frappe.whitelist()
+def ppn_keluaran(company, from_date, to_date):
+	_check("Sales Invoice")
+	from erpbio_indonesia_localization.erpbio_indonesia_localization.report.ppn_keluaran.ppn_keluaran import (
+		get_columns,
+		get_data,
+	)
+
+	filters = frappe._dict({"company": company, "from_date": from_date, "to_date": to_date})
+	return {"columns": get_columns(), "data": get_data(filters)}
+
+
 # ------------------------------------------------------------------- imports
 @frappe.whitelist()
 def list_imports(start=0, page_length=20):

@@ -41,6 +41,7 @@ const route = useRoute()
 const NAV = [
 	{ label: "Exports", route: "ExportList", icon: "upload", match: "/exports" },
 	{ label: "Imports", route: "ImportList", icon: "download", match: "/imports" },
+	{ label: "PPN Keluaran", route: "PpnKeluaran", icon: "bar-chart-2", match: "/reports/ppn-keluaran" },
 	{ label: "Settings", route: "Settings", icon: "settings", match: "/settings" },
 ]
 

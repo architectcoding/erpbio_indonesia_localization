@@ -10,6 +10,9 @@
 			<Button :loading="busy === 'fetch'" @click="fetchInvoices">
 				<template #prefix><FeatherIcon name="refresh-cw" class="h-3.5 w-3.5" /></template>{{ __("Fetch Invoices") }}
 			</Button>
+			<Button v-if="validCount" :loading="busy === 'xml'" :title="__('Direct XML — validate against Coretax before relying on it; the Excel + official converter is the safe route.')" @click="generateXml">
+				<template #prefix><FeatherIcon name="code" class="h-3.5 w-3.5" /></template>{{ __("Generate XML") }}
+			</Button>
 			<Button v-if="validCount" variant="solid" :loading="busy === 'generate'" @click="generate">
 				<template #prefix><FeatherIcon name="file-text" class="h-3.5 w-3.5" /></template>{{ __("Generate Coretax File") }}
 			</Button>
@@ -123,6 +126,21 @@ async function generate() {
 		await load()
 	} catch (e) {
 		errorMessage.value = e?.messages?.[0] || __("Could not generate the file.")
+	} finally {
+		busy.value = ""
+	}
+}
+
+async function generateXml() {
+	busy.value = "xml"
+	errorMessage.value = ""
+	okMessage.value = ""
+	try {
+		const r = await call("erpbio_indonesia_localization.api.tax.generate_export_xml", { name: props.name })
+		okMessage.value = __("XML generated for {0} invoices — check the first upload against Coretax carefully.", [r.invoices])
+		await load()
+	} catch (e) {
+		errorMessage.value = e?.messages?.[0] || __("Could not generate the XML.")
 	} finally {
 		busy.value = ""
 	}
