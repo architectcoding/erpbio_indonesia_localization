@@ -15,6 +15,7 @@
   "status",
   "section_amounts",
   "gross_amount",
+  "auto_created",
   "rate",
   "col_1",
   "tax_amount",
@@ -86,8 +87,15 @@
   {
    "fieldname": "gross_amount",
    "fieldtype": "Currency",
-   "label": "Gross Amount (DPP)",
-   "reqd": 1
+   "label": "Gross Amount (DPP)"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_created",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Auto Created",
+   "read_only": 1
   },
   {
    "fieldname": "rate",

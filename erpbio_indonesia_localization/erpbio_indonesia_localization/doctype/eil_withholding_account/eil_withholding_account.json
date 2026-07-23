@@ -1,0 +1,45 @@
+{
+ "actions": [],
+ "creation": "2026-07-23 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["account", "tax_type", "rate"],
+ "fields": [
+  {
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Deduction Account",
+   "options": "Account",
+   "reqd": 1,
+   "description": "The prepaid-tax account used in Payment Entry deduction rows, e.g. PPh 22 Dibayar Dimuka."
+  },
+  {
+   "default": "PPh 22",
+   "fieldname": "tax_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Tax Type",
+   "options": "PPh 22\nPPh 23\nPPh 4(2)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "rate",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Rate (%)",
+   "description": "Used to back-compute the gross (DPP) from the withheld amount."
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-23 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPbio Indonesia Localization",
+ "name": "EIL Withholding Account",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

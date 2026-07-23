@@ -18,6 +18,18 @@ required_apps = ["erpnext"]
 after_install = "erpbio_indonesia_localization.setup.install.setup_eil"
 after_migrate = "erpbio_indonesia_localization.setup.install.setup_eil"
 
+# Document Events
+# ---------------
+# Observers only: they create/clean Bukti Potong tracking docs and never touch
+# the Payment Entry itself or its GL. Both are fully try/except-guarded.
+
+doc_events = {
+	"Payment Entry": {
+		"on_submit": "erpbio_indonesia_localization.doc_events.payment_entry.on_submit",
+		"on_cancel": "erpbio_indonesia_localization.doc_events.payment_entry.on_cancel",
+	}
+}
+
 # /erpbio-tax SPA (tax-frontend build served from www/erpbio_tax.html)
 website_route_rules = [
 	{"from_route": "/erpbio-tax", "to_route": "erpbio_tax"},

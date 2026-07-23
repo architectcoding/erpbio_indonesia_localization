@@ -408,3 +408,24 @@ msgstr "Catatan"
 
 msgid "Expected"
 msgstr "Diharapkan"
+
+msgid "Withholding (Bukti Potong Automation)"
+msgstr "Pemotongan (Otomasi Bukti Potong)"
+
+msgid "When a submitted Payment Entry has a deduction row using one of these accounts, an Expected Bukti Potong is created automatically."
+msgstr "Saat Entri Pembayaran tersubmit punya baris potongan dengan salah satu akun ini, Bukti Potong berstatus Diharapkan dibuat otomatis."
+
+msgid "Select account"
+msgstr "Pilih akun"
+
+msgid "Rate %"
+msgstr "Tarif %"
+
+msgid "Remove"
+msgstr "Hapus"
+
+msgid "Add Account"
+msgstr "Tambah Akun"
+
+msgid "Auto-created from Payment Entry {0} deduction ({1})."
+msgstr "Dibuat otomatis dari potongan Entri Pembayaran {0} ({1})."

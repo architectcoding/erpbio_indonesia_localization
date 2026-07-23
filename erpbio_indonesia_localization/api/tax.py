@@ -283,6 +283,10 @@ def get_settings():
 		"use_dpp_nilai_lain": s.use_dpp_nilai_lain,
 		"dpp_numerator": s.dpp_numerator,
 		"dpp_denominator": s.dpp_denominator,
+		"withholding_accounts": [
+			{"account": r.account, "tax_type": r.tax_type, "rate": flt(r.rate)}
+			for r in (s.withholding_accounts or [])
+		],
 	}
 
 
@@ -301,5 +305,26 @@ def save_settings(payload):
 	):
 		if field in payload:
 			s.set(field, payload[field])
+	if "withholding_accounts" in payload:
+		s.set("withholding_accounts", [])
+		for row in payload["withholding_accounts"]:
+			if row.get("account"):
+				s.append(
+					"withholding_accounts",
+					{"account": row["account"], "tax_type": row.get("tax_type") or "PPh 22", "rate": row.get("rate")},
+				)
 	s.save()
 	return get_settings()
+
+
+@frappe.whitelist()
+def account_options():
+	"""Non-group accounts for the withholding-account picker."""
+	_check("Indonesia Tax Settings")
+	return frappe.get_all(
+		"Account",
+		filters={"is_group": 0, "disabled": 0},
+		pluck="name",
+		order_by="name",
+		limit_page_length=0,
+	)

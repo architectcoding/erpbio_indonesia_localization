@@ -32,6 +32,32 @@
 				{{ __("With DPP Nilai Lain 11/12 and 12% PPN, the effective rate is 11% — the current treatment for non-luxury goods and services.") }}
 			</p>
 		</div>
+
+		<!-- withholding automation -->
+		<div class="mt-4 rounded-lg border bg-surface-white p-4">
+			<h2 class="mb-1 text-sm font-semibold text-ink-gray-9">{{ __("Withholding (Bukti Potong Automation)") }}</h2>
+			<p class="mb-3 text-xs text-ink-gray-4">
+				{{ __("When a submitted Payment Entry has a deduction row using one of these accounts, an Expected Bukti Potong is created automatically.") }}
+			</p>
+			<div v-for="(row, i) in form.withholding_accounts" :key="i" class="mb-2 flex items-center gap-2">
+				<select v-model="row.account" class="form-select h-8 min-w-0 flex-1 text-sm">
+					<option value="">{{ __("Select account") }}</option>
+					<option v-for="a in accounts" :key="a" :value="a">{{ a }}</option>
+				</select>
+				<select v-model="row.tax_type" class="form-select h-8 w-28 text-sm">
+					<option>PPh 22</option>
+					<option>PPh 23</option>
+					<option>PPh 4(2)</option>
+				</select>
+				<input type="number" step="any" v-model.number="row.rate" class="form-input h-8 w-20 text-sm" :placeholder="__('Rate %')" />
+				<button class="p-1 text-ink-gray-4 hover:text-ink-red-3" :title="__('Remove')" @click="form.withholding_accounts.splice(i, 1)">
+					<FeatherIcon name="x" class="h-4 w-4" />
+				</button>
+			</div>
+			<Button variant="subtle" @click="form.withholding_accounts.push({ account: '', tax_type: 'PPh 22', rate: 1.5 })">
+				<template #prefix><FeatherIcon name="plus" class="h-3.5 w-3.5" /></template>{{ __("Add Account") }}
+			</Button>
+		</div>
 		<p v-if="errorMessage" class="mt-3 text-sm text-ink-red-3">{{ errorMessage }}</p>
 		<p v-if="okMessage" class="mt-3 text-sm text-ink-green-3">{{ okMessage }}</p>
 	</div>
@@ -44,6 +70,7 @@ import { call } from "frappe-ui"
 const __ = inject("$translate")
 
 const codes = ref([])
+const accounts = ref([])
 const busy = ref(false)
 const errorMessage = ref("")
 const okMessage = ref("")
@@ -54,15 +81,21 @@ const form = reactive({
 	use_dpp_nilai_lain: true,
 	dpp_numerator: 11,
 	dpp_denominator: 12,
+	withholding_accounts: [],
 })
 
 async function load() {
-	const [s, ctx] = await Promise.all([
+	const [s, ctx, accts] = await Promise.all([
 		call("erpbio_indonesia_localization.api.tax.get_settings"),
 		call("erpbio_indonesia_localization.api.tax.get_context"),
+		call("erpbio_indonesia_localization.api.tax.account_options"),
 	])
-	Object.assign(form, s, { use_dpp_nilai_lain: !!s.use_dpp_nilai_lain })
+	Object.assign(form, s, {
+		use_dpp_nilai_lain: !!s.use_dpp_nilai_lain,
+		withholding_accounts: s.withholding_accounts || [],
+	})
 	codes.value = ctx.transaction_codes || []
+	accounts.value = accts || []
 }
 load()
 

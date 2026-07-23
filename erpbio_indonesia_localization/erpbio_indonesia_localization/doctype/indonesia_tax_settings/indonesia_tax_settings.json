@@ -11,7 +11,9 @@
   "tarif_ppn",
   "use_dpp_nilai_lain",
   "dpp_numerator",
-  "dpp_denominator"
+  "dpp_denominator",
+  "withholding_section",
+  "withholding_accounts"
  ],
  "fields": [
   {
@@ -63,6 +65,18 @@
    "fieldname": "dpp_denominator",
    "fieldtype": "Int",
    "label": "DPP Fraction Denominator"
+  },
+  {
+   "fieldname": "withholding_section",
+   "fieldtype": "Section Break",
+   "label": "Withholding (Bukti Potong Automation)"
+  },
+  {
+   "fieldname": "withholding_accounts",
+   "fieldtype": "Table",
+   "label": "Withholding Deduction Accounts",
+   "options": "EIL Withholding Account",
+   "description": "When a submitted Payment Entry has a deduction row using one of these accounts, an Expected Bukti Potong is created automatically."
   }
  ],
  "issingle": 1,
