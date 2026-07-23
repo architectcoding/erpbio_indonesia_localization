@@ -3,6 +3,8 @@
 # Permission model: everything here requires rights on the underlying doctype
 # (Accounts Manager per the doctype permissions).
 
+import re
+
 import frappe
 from frappe import _
 from frappe.utils import flt
@@ -144,16 +146,22 @@ def spt_masa(company, from_date, to_date):
 
 # -------------------------------------------------------------- bukti potong
 @frappe.whitelist()
-def list_bukti_potong(start=0, page_length=50):
+def list_bukti_potong(direction=None, start=0, page_length=50):
 	_check("Bukti Potong")
+	filters = {"direction": direction} if direction else {}
 	return frappe.get_all(
 		"Bukti Potong",
+		filters=filters,
 		fields=[
 			"name",
+			"direction",
 			"customer",
+			"supplier",
 			"tax_type",
+			"tax_object_code",
 			"sales_invoice",
 			"payment_entry",
+			"withholding_date",
 			"gross_amount",
 			"rate",
 			"tax_amount",
@@ -183,10 +191,14 @@ def save_bukti_potong(payload):
 			)[0]
 	for field in (
 		"company",
+		"direction",
 		"customer",
+		"supplier",
 		"tax_type",
+		"tax_object_code",
 		"sales_invoice",
 		"payment_entry",
+		"withholding_date",
 		"gross_amount",
 		"rate",
 		"tax_amount",
@@ -205,9 +217,98 @@ def bukti_potong_lookups():
 	_check("Bukti Potong")
 	return {
 		"customers": frappe.get_all("Customer", filters={"disabled": 0}, pluck="name", order_by="name"),
+		"suppliers": frappe.get_all("Supplier", filters={"disabled": 0}, pluck="name", order_by="name"),
 		# common statutory rates offered as defaults; the user can override
 		"default_rates": {"PPh 22": 1.5, "PPh 23": 2.0, "PPh 4(2)": 10.0},
 	}
+
+
+@frappe.whitelist(methods=["POST"])
+def export_ebupot(from_date, to_date, company=None):
+	"""The period's ISSUED certificates as a working Excel for Coretax's e-Bupot
+	(SPT Masa PPh Unifikasi) bulk entry — one row per certificate with the NPWP,
+	object code, DPP, rate and PPh. Map it onto DJP's current template; like the
+	faktur side, validate the first real filing carefully."""
+	_check("Bukti Potong")
+	import io
+
+	import openpyxl
+
+	filters = {"direction": "Issued", "withholding_date": ["between", [from_date, to_date]]}
+	if company:
+		filters["company"] = company
+	rows = frappe.get_all(
+		"Bukti Potong",
+		filters=filters,
+		fields=[
+			"name",
+			"company",
+			"supplier",
+			"tax_type",
+			"tax_object_code",
+			"withholding_date",
+			"gross_amount",
+			"rate",
+			"tax_amount",
+			"bp_number",
+			"payment_entry",
+		],
+		order_by="withholding_date asc, name asc",
+	)
+	if not rows:
+		frappe.throw(_("No issued Bukti Potong in this period."))
+
+	wb = openpyxl.Workbook()
+	ws = wb.active
+	ws.title = "eBupot"
+	ws.append(
+		[
+			"NPWP Pemotong",
+			"Masa Pajak",
+			"NPWP Dipotong",
+			"Nama Dipotong",
+			"Jenis Pajak",
+			"Kode Objek Pajak",
+			"DPP",
+			"Tarif (%)",
+			"PPh Dipotong",
+			"Tanggal Pemotongan",
+			"Nomor Bukti Potong",
+			"Referensi",
+		]
+	)
+	for r in rows:
+		npwp_pemotong = re.sub(r"\D", "", frappe.db.get_value("Company", r.company, "tax_id") or "")
+		npwp_dipotong = re.sub(r"\D", "", frappe.db.get_value("Supplier", r.supplier, "tax_id") or "")
+		masa = r.withholding_date.strftime("%m-%Y") if r.withholding_date else ""
+		ws.append(
+			[
+				npwp_pemotong,
+				masa,
+				npwp_dipotong,
+				r.supplier,
+				r.tax_type,
+				r.tax_object_code or "",
+				flt(r.gross_amount, 2),
+				flt(r.rate, 2),
+				flt(r.tax_amount, 2),
+				r.withholding_date.strftime("%d/%m/%Y") if r.withholding_date else "",
+				r.bp_number or "",
+				r.payment_entry or r.name,
+			]
+		)
+
+	buf = io.BytesIO()
+	wb.save(buf)
+	file_doc = frappe.get_doc(
+		{
+			"doctype": "File",
+			"file_name": f"ebupot-{from_date}-to-{to_date}.xlsx",
+			"is_private": 1,
+			"content": buf.getvalue(),
+		}
+	).insert(ignore_permissions=True)
+	return {"file_url": file_doc.file_url, "rows": len(rows)}
 
 
 # ------------------------------------------------------------------- imports
@@ -284,7 +385,13 @@ def get_settings():
 		"dpp_numerator": s.dpp_numerator,
 		"dpp_denominator": s.dpp_denominator,
 		"withholding_accounts": [
-			{"account": r.account, "tax_type": r.tax_type, "rate": flt(r.rate)}
+			{
+				"account": r.account,
+				"direction": r.direction or "Received",
+				"tax_type": r.tax_type,
+				"rate": flt(r.rate),
+				"tax_object_code": r.tax_object_code or "",
+			}
 			for r in (s.withholding_accounts or [])
 		],
 	}
@@ -311,7 +418,13 @@ def save_settings(payload):
 			if row.get("account"):
 				s.append(
 					"withholding_accounts",
-					{"account": row["account"], "tax_type": row.get("tax_type") or "PPh 22", "rate": row.get("rate")},
+					{
+						"account": row["account"],
+						"direction": row.get("direction") or "Received",
+						"tax_type": row.get("tax_type") or "PPh 22",
+						"rate": row.get("rate"),
+						"tax_object_code": row.get("tax_object_code"),
+					},
 				)
 	s.save()
 	return get_settings()

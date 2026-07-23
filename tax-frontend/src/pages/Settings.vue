@@ -44,17 +44,22 @@
 					<option value="">{{ __("Select account") }}</option>
 					<option v-for="a in accounts" :key="a" :value="a">{{ a }}</option>
 				</select>
+				<select v-model="row.direction" class="form-select h-8 w-28 text-sm" :title="__('Received: a customer withholds from us. Issued: we withhold from a supplier.')">
+					<option value="Received">{{ __("Received") }}</option>
+					<option value="Issued">{{ __("Issued") }}</option>
+				</select>
 				<select v-model="row.tax_type" class="form-select h-8 w-28 text-sm">
 					<option>PPh 22</option>
 					<option>PPh 23</option>
 					<option>PPh 4(2)</option>
 				</select>
 				<input type="number" step="any" v-model.number="row.rate" class="form-input h-8 w-20 text-sm" :placeholder="__('Rate %')" />
+				<input v-if="row.direction === 'Issued'" v-model="row.tax_object_code" class="form-input h-8 w-28 text-sm" :placeholder="__('Kode objek')" />
 				<button class="p-1 text-ink-gray-4 hover:text-ink-red-3" :title="__('Remove')" @click="form.withholding_accounts.splice(i, 1)">
 					<FeatherIcon name="x" class="h-4 w-4" />
 				</button>
 			</div>
-			<Button variant="subtle" @click="form.withholding_accounts.push({ account: '', tax_type: 'PPh 22', rate: 1.5 })">
+			<Button variant="subtle" @click="form.withholding_accounts.push({ account: '', direction: 'Received', tax_type: 'PPh 22', rate: 1.5, tax_object_code: '' })">
 				<template #prefix><FeatherIcon name="plus" class="h-3.5 w-3.5" /></template>{{ __("Add Account") }}
 			</Button>
 		</div>

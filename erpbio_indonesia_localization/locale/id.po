@@ -429,3 +429,69 @@ msgstr "Tambah Akun"
 
 msgid "Auto-created from Payment Entry {0} deduction ({1})."
 msgstr "Dibuat otomatis dari potongan Entri Pembayaran {0} ({1})."
+
+msgid "Export e-Bupot"
+msgstr "Ekspor e-Bupot"
+
+msgid "Received (customer withheld from us)"
+msgstr "Diterima (pelanggan memotong dari kita)"
+
+msgid "Issued (we withheld from suppliers)"
+msgstr "Diterbitkan (kita memotong dari pemasok)"
+
+msgid "Certificates owed to us by customers who withheld PPh — your prepaid-tax credit evidence."
+msgstr "Bukti potong yang menjadi hak kita dari pelanggan yang memotong PPh — dasar kredit pajak dibayar dimuka."
+
+msgid "PPh we withheld from supplier payments — to report via e-Bupot (SPT Masa PPh Unifikasi)."
+msgstr "PPh yang kita potong dari pembayaran pemasok — untuk dilaporkan lewat e-Bupot (SPT Masa PPh Unifikasi)."
+
+msgid "Reported"
+msgstr "Dilaporkan"
+
+msgid "To Report"
+msgstr "Untuk Dilaporkan"
+
+msgid "Direction"
+msgstr "Arah"
+
+msgid "Issued"
+msgstr "Diterbitkan"
+
+msgid "Supplier (Dipotong)"
+msgstr "Pemasok (Dipotong)"
+
+msgid "Withholding Date"
+msgstr "Tanggal Pemotongan"
+
+msgid "Kode Objek Pajak"
+msgstr "Kode Objek Pajak"
+
+msgid "Kode Objek"
+msgstr "Kode Objek"
+
+msgid "Kode objek"
+msgstr "Kode objek"
+
+msgid "e.g. 24-104-01"
+msgstr "mis. 24-104-01"
+
+msgid "Fills = Reported"
+msgstr "Terisi = Dilaporkan"
+
+msgid "Exported {0} certificates."
+msgstr "{0} bukti potong diekspor."
+
+msgid "Could not export."
+msgstr "Tidak dapat mengekspor."
+
+msgid "No issued Bukti Potong in this period."
+msgstr "Tidak ada Bukti Potong terbitan pada periode ini."
+
+msgid "An issued Bukti Potong needs the Supplier it was issued to."
+msgstr "Bukti Potong terbitan memerlukan Pemasok yang dipotong."
+
+msgid "A received Bukti Potong needs the Customer who withheld."
+msgstr "Bukti Potong diterima memerlukan Pelanggan yang memotong."
+
+msgid "Received: a customer withholds from us. Issued: we withhold from a supplier."
+msgstr "Diterima: pelanggan memotong dari kita. Diterbitkan: kita memotong dari pemasok."

@@ -3,7 +3,7 @@
  "creation": "2026-07-23 12:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": ["account", "tax_type", "rate"],
+ "field_order": ["account", "direction", "tax_type", "rate", "tax_object_code"],
  "fields": [
   {
    "fieldname": "account",
@@ -29,6 +29,23 @@
    "in_list_view": 1,
    "label": "Rate (%)",
    "description": "Used to back-compute the gross (DPP) from the withheld amount."
+  },
+  {
+   "default": "Received",
+   "fieldname": "direction",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Direction",
+   "options": "Received\nIssued",
+   "reqd": 1,
+   "description": "Received: a customer withholds from us (prepaid asset account). Issued: we withhold from a supplier (PPh payable account)."
+  },
+  {
+   "fieldname": "tax_object_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Kode Objek Pajak",
+   "description": "Stamped onto auto-created issued certificates for e-Bupot reporting."
   }
  ],
  "istable": 1,
