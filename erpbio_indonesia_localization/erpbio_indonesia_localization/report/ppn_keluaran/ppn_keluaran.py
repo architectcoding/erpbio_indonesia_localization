@@ -25,6 +25,7 @@ def get_columns():
 		{"fieldname": "ppn", "label": _("PPN"), "fieldtype": "Currency", "width": 120},
 		{"fieldname": "faktur_number", "label": _("Nomor Faktur"), "fieldtype": "Data", "width": 160},
 		{"fieldname": "faktur_status", "label": _("e-Faktur Status"), "fieldtype": "Data", "width": 110},
+		{"fieldname": "bukti_setor_status", "label": _("Bukti Setor"), "fieldtype": "Data", "width": 100},
 	]
 
 
@@ -54,6 +55,7 @@ def get_data(filters):
 			"eil_kode_transaksi",
 			"eil_faktur_number",
 			"eil_faktur_status",
+			"eil_bukti_setor_status",
 		],
 		order_by="posting_date asc, name asc",
 	)
@@ -74,6 +76,7 @@ def get_data(filters):
 				"ppn": flt(dpp_lain * tarif / 100.0, 2),
 				"faktur_number": si.eil_faktur_number or "",
 				"faktur_status": si.eil_faktur_status or _("Not Exported"),
+				"bukti_setor_status": (si.eil_bukti_setor_status or _("Belum Diterima")) if si.eil_kode_transaksi == "02" else "",
 			}
 		)
 	return data

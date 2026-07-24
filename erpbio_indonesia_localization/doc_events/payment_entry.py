@@ -97,3 +97,47 @@ def _withholding_map(direction):
 		for row in (settings.withholding_accounts or [])
 		if row.account and (row.get("direction") or "Received") == direction
 	}
+
+
+# --- WAPU/Bendahara: clear Piutang PPN Bendahara on the receipt --------------
+# When a receipt references a pemungut Sales Invoice, the government-collected
+# PPN arrives as part of the cash (net + PPN) but belongs to the PPN receivable,
+# not the customer's trade AR. We add a NEGATIVE deduction to the invoice's
+# "PPN Dipungut Pemungut" account so that: allocated(net) = paid(net+PPN) +
+# deduction(-PPN). The user enters the actual bank receipt; this routes the PPN
+# excess to Piutang PPN Bendahara. Idempotent. PPh 22 is NOT touched here (it is
+# booked at invoice time as a prepaid asset). Full-allocation assumption; partial
+# payments would need proration (left as a follow-up).
+
+def before_validate(doc, method=None):
+	if doc.payment_type != "Receive" or doc.party_type != "Customer":
+		return
+	to_clear = {}
+	for ref in doc.get("references") or []:
+		if ref.reference_doctype == "Sales Invoice" and ref.reference_name:
+			for acc, amt in _pemungut_ppn(ref.reference_name).items():
+				to_clear[acc] = to_clear.get(acc, 0.0) + amt
+	for acc, amt in to_clear.items():
+		have = sum(-flt(d.amount) for d in (doc.get("deductions") or [])
+				   if d.account == acc and flt(d.amount) < 0)
+		delta = flt(amt) - have
+		if abs(delta) < 0.005:
+			continue
+		doc.append("deductions", {
+			"account": acc,
+			"cost_center": frappe.get_cached_value("Company", doc.company, "cost_center"),
+			"amount": -delta,
+		})
+
+
+def _pemungut_ppn(si_name):
+	"""{receivable_account: total PPN} for the invoice's PPN-Dipungut-Pemungut rows."""
+	out = {}
+	for t in frappe.get_all(
+		"Sales Taxes and Charges",
+		filters={"parent": si_name, "parenttype": "Sales Invoice",
+				 "eil_govt_tax_treatment": "PPN Dipungut Pemungut"},
+		fields=["account_head", "base_tax_amount_after_discount_amount"],
+	):
+		out[t.account_head] = out.get(t.account_head, 0.0) + abs(flt(t.base_tax_amount_after_discount_amount))
+	return out

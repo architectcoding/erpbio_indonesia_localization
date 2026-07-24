@@ -55,6 +55,7 @@
 						<th class="px-3 py-2 text-right">{{ __("PPN") }}</th>
 						<th class="px-3 py-2">{{ __("Nomor Faktur") }}</th>
 						<th class="px-3 py-2">{{ __("Status") }}</th>
+						<th class="px-3 py-2">{{ __("Bukti Setor") }}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -72,9 +73,15 @@
 								{{ __(row.faktur_status) }}
 							</Badge>
 						</td>
+						<td class="px-3 py-2">
+							<Badge v-if="row.bukti_setor_status" :theme="row.bukti_setor_status === 'Diterima' ? 'green' : 'orange'" variant="subtle">
+								{{ __(row.bukti_setor_status) }}
+							</Badge>
+							<span v-else class="text-ink-gray-4">—</span>
+						</td>
 					</tr>
 					<tr v-if="!rows.length && ran">
-						<td colspan="9" class="px-3 py-8 text-center text-ink-gray-4">{{ __("No invoices in this period.") }}</td>
+						<td colspan="10" class="px-3 py-8 text-center text-ink-gray-4">{{ __("No invoices in this period.") }}</td>
 					</tr>
 				</tbody>
 			</table>
