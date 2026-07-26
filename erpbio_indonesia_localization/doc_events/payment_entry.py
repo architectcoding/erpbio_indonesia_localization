@@ -137,7 +137,9 @@ def _pemungut_ppn(si_name):
 		"Sales Taxes and Charges",
 		filters={"parent": si_name, "parenttype": "Sales Invoice",
 				 "eil_govt_tax_treatment": "PPN Dipungut Pemungut"},
-		fields=["account_head", "base_tax_amount_after_discount_amount"],
+		# the row itself is inert (Actual 0) so the invoice books gross —
+		# eil_wapu_amount is where the real figure lives
+		fields=["account_head", "eil_wapu_amount"],
 	):
-		out[t.account_head] = out.get(t.account_head, 0.0) + abs(flt(t.base_tax_amount_after_discount_amount))
+		out[t.account_head] = out.get(t.account_head, 0.0) + abs(flt(t.eil_wapu_amount))
 	return out
