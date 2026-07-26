@@ -32,9 +32,13 @@ doc_events = {
 		"on_cancel": "erpbio_indonesia_localization.doc_events.payment_entry.on_cancel",
 	},
 	"Sales Invoice": {
-		# WAPU/Bendahara: normalise government-collected tax rows to a negative
-		# (deduction) rate before the tax engine runs. See doc_events/sales_invoice.py.
+		# WAPU/Bendahara: keep government-collected tax rows out of the invoice
+		# totals, then carve them out of the receivable with their own entry.
+		# See doc_events/sales_invoice.py.
 		"before_validate": "erpbio_indonesia_localization.doc_events.sales_invoice.before_validate",
+		"validate": "erpbio_indonesia_localization.doc_events.sales_invoice.validate",
+		"on_submit": "erpbio_indonesia_localization.doc_events.sales_invoice.on_submit",
+		"on_cancel": "erpbio_indonesia_localization.doc_events.sales_invoice.on_cancel",
 	},
 }
 

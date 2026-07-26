@@ -244,6 +244,16 @@ CUSTOM_FIELDS = {
 			"insert_after": "eil_bukti_setor_no",
 			"allow_on_submit": 1,
 		},
+		{
+			"fieldname": "eil_wapu_journal_entry",
+			"label": "WAPU Reclassification Entry",
+			"fieldtype": "Link",
+			"options": "Journal Entry",
+			"insert_after": "eil_bukti_setor_date",
+			"read_only": 1,
+			"allow_on_submit": 1,
+			"no_copy": 1,
+		},
 	],
 	"Sales Taxes and Charges": [
 		{
@@ -253,6 +263,24 @@ CUSTOM_FIELDS = {
 			"options": "\nPPN Dipungut Pemungut\nPotongan Pemerintah (Withholding)",
 			"insert_after": "account_head",
 			"description": "WAPU/Bendahara: 'PPN Dipungut Pemungut' books this tax as a receivable (Piutang PPN Bendahara), shown on the faktur, cleared at payment; 'Potongan Pemerintah (Withholding)' books it as a prepaid-tax asset (e.g. PPh 22 Dibayar di Muka), hidden on the printed invoice.",
+		},
+		{
+			"fieldname": "eil_wapu_rate",
+			"label": "WAPU Rate (%)",
+			"fieldtype": "Percent",
+			"insert_after": "eil_govt_tax_treatment",
+			"read_only": 1,
+			"depends_on": "eil_govt_tax_treatment",
+			"description": "The tax rate carried over from the template. ERPNext clears `rate` on an Actual-charge row, so the percentage is kept here.",
+		},
+		{
+			"fieldname": "eil_wapu_amount",
+			"label": "WAPU Amount",
+			"fieldtype": "Currency",
+			"insert_after": "eil_wapu_rate",
+			"read_only": 1,
+			"depends_on": "eil_govt_tax_treatment",
+			"description": "net_total x WAPU rate. The row itself stays inert so the invoice books gross; this amount drives the reclassification entry and the faktur.",
 		},
 	],
 }
