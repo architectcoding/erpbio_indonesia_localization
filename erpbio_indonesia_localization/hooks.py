@@ -25,9 +25,17 @@ after_migrate = "erpbio_indonesia_localization.setup.install.setup_eil"
 
 doc_events = {
 	"Payment Entry": {
+		# WAPU/Bendahara: auto-clear Piutang PPN Bendahara on receipts against
+		# pemungut invoices (negative deduction). See doc_events/payment_entry.py.
+		"before_validate": "erpbio_indonesia_localization.doc_events.payment_entry.before_validate",
 		"on_submit": "erpbio_indonesia_localization.doc_events.payment_entry.on_submit",
 		"on_cancel": "erpbio_indonesia_localization.doc_events.payment_entry.on_cancel",
-	}
+	},
+	"Sales Invoice": {
+		# WAPU/Bendahara: normalise government-collected tax rows to a negative
+		# (deduction) rate before the tax engine runs. See doc_events/sales_invoice.py.
+		"before_validate": "erpbio_indonesia_localization.doc_events.sales_invoice.before_validate",
+	},
 }
 
 # /erpbio-tax SPA (tax-frontend build served from www/erpbio_tax.html)

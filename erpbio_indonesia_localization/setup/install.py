@@ -213,6 +213,47 @@ CUSTOM_FIELDS = {
 			"no_copy": 1,
 			"insert_after": "eil_faktur_number",
 		},
+		{
+			"fieldname": "eil_ppn_bendahara_section",
+			"label": "PPN Bendahara (WAPU)",
+			"fieldtype": "Section Break",
+			"insert_after": "eil_faktur_date",
+			"depends_on": "eval:doc.eil_kode_transaksi=='02'",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "eil_bukti_setor_status",
+			"label": "Bukti Setor Status",
+			"fieldtype": "Select",
+			"options": "\nBelum Diterima\nDiterima",
+			"insert_after": "eil_ppn_bendahara_section",
+			"allow_on_submit": 1,
+			"in_standard_filter": 1,
+		},
+		{
+			"fieldname": "eil_bukti_setor_no",
+			"label": "No. Bukti Setor / SSP",
+			"fieldtype": "Data",
+			"insert_after": "eil_bukti_setor_status",
+			"allow_on_submit": 1,
+		},
+		{
+			"fieldname": "eil_bukti_setor_date",
+			"label": "Tgl Bukti Setor",
+			"fieldtype": "Date",
+			"insert_after": "eil_bukti_setor_no",
+			"allow_on_submit": 1,
+		},
+	],
+	"Sales Taxes and Charges": [
+		{
+			"fieldname": "eil_govt_tax_treatment",
+			"label": "Government Tax Treatment",
+			"fieldtype": "Select",
+			"options": "\nPPN Dipungut Pemungut\nPotongan Pemerintah (Withholding)",
+			"insert_after": "account_head",
+			"description": "WAPU/Bendahara: 'PPN Dipungut Pemungut' books this tax as a receivable (Piutang PPN Bendahara), shown on the faktur, cleared at payment; 'Potongan Pemerintah (Withholding)' books it as a prepaid-tax asset (e.g. PPh 22 Dibayar di Muka), hidden on the printed invoice.",
+		},
 	],
 }
 
