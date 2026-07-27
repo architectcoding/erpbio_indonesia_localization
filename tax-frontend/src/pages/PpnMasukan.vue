@@ -15,8 +15,16 @@
 						<option v-for="c in companies" :key="c" :value="c">{{ c }}</option>
 					</select>
 				</div>
-				<FormControl type="date" :label="__('From Date')" v-model="fromDate" />
-				<FormControl type="date" :label="__('To Date')" v-model="toDate" />
+				<div class="flex flex-col gap-1">
+					<label class="text-xs text-ink-gray-5">{{ __("From Date") }}</label>
+					<DatePickerPopover :modelValue="fromDate" clearable
+						@update:modelValue="(v) => (fromDate = v || '')" />
+				</div>
+				<div class="flex flex-col gap-1">
+					<label class="text-xs text-ink-gray-5">{{ __("To Date") }}</label>
+					<DatePickerPopover :modelValue="toDate" clearable
+						@update:modelValue="(v) => (toDate = v || '')" />
+				</div>
 				<div class="flex items-end">
 					<Button variant="solid" class="w-full" :loading="loading" :disabled="!company || !fromDate || !toDate" @click="run">
 						<template #prefix><FeatherIcon name="play" class="h-3.5 w-3.5" /></template>{{ __("Run") }}
@@ -76,6 +84,7 @@
 </template>
 
 <script setup>
+import DatePickerPopover from "@/components/DatePickerPopover.vue"
 import { computed, inject, ref } from "vue"
 import { call } from "frappe-ui"
 

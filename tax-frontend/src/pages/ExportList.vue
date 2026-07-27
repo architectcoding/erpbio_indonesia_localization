@@ -55,8 +55,16 @@
 							<option v-for="c in companies" :key="c" :value="c">{{ c }}</option>
 						</select>
 					</div>
-					<FormControl type="date" :label="__('From Date')" v-model="form.from_date" />
-					<FormControl type="date" :label="__('To Date')" v-model="form.to_date" />
+					<div class="flex flex-col gap-1">
+						<label class="text-xs text-ink-gray-5">{{ __("From Date") }}</label>
+						<DatePickerPopover :modelValue="form.from_date" clearable
+							@update:modelValue="(v) => (form.from_date = v || '')" />
+					</div>
+					<div class="flex flex-col gap-1">
+						<label class="text-xs text-ink-gray-5">{{ __("To Date") }}</label>
+						<DatePickerPopover :modelValue="form.to_date" clearable
+							@update:modelValue="(v) => (form.to_date = v || '')" />
+					</div>
 					<div class="flex justify-end gap-2">
 						<Button @click="showNew = false">{{ __("Cancel") }}</Button>
 						<Button variant="solid" :loading="busy" :disabled="!form.company || !form.from_date || !form.to_date" @click="create">
@@ -71,6 +79,7 @@
 </template>
 
 <script setup>
+import DatePickerPopover from "@/components/DatePickerPopover.vue"
 import { inject, reactive, ref } from "vue"
 import { useRouter } from "vue-router"
 import { call } from "frappe-ui"

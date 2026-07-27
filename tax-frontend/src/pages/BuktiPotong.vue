@@ -117,9 +117,17 @@
 					<FormControl type="number" :label="__('Gross Amount (DPP)')" v-model="form.gross_amount" />
 					<FormControl type="number" :label="__('Tax Withheld (blank = Gross × Rate)')" v-model="form.tax_amount" />
 					<FormControl v-if="form.direction === 'Issued'" type="text" :label="__('Kode Objek Pajak')" v-model="form.tax_object_code" :placeholder="__('e.g. 24-104-01')" />
-					<FormControl type="date" :label="__('Withholding Date')" v-model="form.withholding_date" />
+					<div class="flex flex-col gap-1">
+						<label class="text-xs text-ink-gray-5">{{ __("Withholding Date") }}</label>
+						<DatePickerPopover :modelValue="form.withholding_date" clearable
+							@update:modelValue="(v) => (form.withholding_date = v || '')" />
+					</div>
 					<FormControl type="text" :label="__('Bukti Potong Number')" v-model="form.bp_number" :placeholder="form.direction === 'Issued' ? __('Fills = Reported') : __('Fills = Received')" />
-					<FormControl type="date" :label="__('Bukti Potong Date')" v-model="form.bp_date" />
+					<div class="flex flex-col gap-1">
+						<label class="text-xs text-ink-gray-5">{{ __("Bukti Potong Date") }}</label>
+						<DatePickerPopover :modelValue="form.bp_date" clearable
+							@update:modelValue="(v) => (form.bp_date = v || '')" />
+					</div>
 					<div class="flex flex-col gap-1 sm:col-span-2">
 						<label class="text-xs text-ink-gray-5">{{ __("Notes") }}</label>
 						<textarea v-model="form.notes" rows="2" class="form-textarea text-sm" />
@@ -139,6 +147,7 @@
 </template>
 
 <script setup>
+import DatePickerPopover from "@/components/DatePickerPopover.vue"
 import { computed, inject, reactive, ref } from "vue"
 import { call } from "frappe-ui"
 
