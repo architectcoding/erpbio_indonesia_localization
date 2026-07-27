@@ -33,19 +33,28 @@ def _charges(doc):
 	return doc.get("eil_govt_charges") or []
 
 
+def apply_treatment_rules(row):
+	"""Whether a charge is settled by the receipt follows from WHAT it is, so
+	derive it rather than leaving it as a checkbox someone must remember.
+
+	The PPN the buyer collects arrives as part of the cash and clears the PPN
+	receivable. A withholding does the opposite: the buyer keeps it, hands over a
+	bukti potong, and we carry a prepaid-tax asset until it is credited on the SPT
+	— clearing it at payment would silently destroy that asset and leave the
+	receipt short by exactly the withheld amount."""
+	row.clear_on_payment = 1 if row.get("treatment") == PPN_TREATMENT else 0
+	return row
+
+
 def before_validate(doc, method=None):
 	"""Populate the charges from a template the first time, so the accountant has
 	rows to adjust rather than a blank table."""
 	if doc.get("is_return"):
 		return
-	# An invoice raised directly (no order to inherit from) still needs the fact.
-	if not doc.get("eil_is_pemungut") and doc.get("customer"):
-		from erpbio_indonesia_localization.doc_events.sales_order import is_pemungut_customer
-
-		if is_pemungut_customer(doc.customer):
-			doc.eil_is_pemungut = 1
+	_derive_pemungut(doc)
 	if not doc.get("eil_is_pemungut"):
 		return
+	_strip_output_vat(doc)
 	if _charges(doc):
 		return  # already populated (or deliberately emptied on an existing doc)
 	template = doc.get("eil_govt_tax_template") or _default_template(doc)
@@ -61,6 +70,93 @@ def before_validate(doc, method=None):
 		doc.append("eil_govt_charges", row)
 
 
+def _output_vat_accounts(company):
+	"""Accounts that represent PPN Keluaran, as configured — else detected.
+
+	The explicit list in Indonesia Tax Settings wins. With nothing configured we
+	fall back to the shape output VAT actually has in a chart of accounts: type
+	"Tax" AND root type "Liability". That distinction is what protects the other
+	rows people legitimately put in Taxes and Charges — freight/Ongkos Kirim and
+	handling sit on Expense/Income accounts (or carry an "Expenses Included In
+	Valuation" type), and PPN Masukan / Piutang PPN Bendaharawan are Tax accounts
+	but root type Asset. Only output VAT is Tax + Liability."""
+	settings = frappe.get_cached_doc("Indonesia Tax Settings")
+	configured = {r.account for r in (settings.get("output_vat_accounts") or []) if r.account}
+	if configured:
+		return configured
+	return set(
+		frappe.get_all(
+			"Account",
+			filters={"company": company, "account_type": "Tax", "root_type": "Liability", "is_group": 0},
+			pluck="name",
+		)
+	)
+
+
+def _strip_output_vat(doc):
+	"""Remove output-VAT rows from a government invoice.
+
+	On a WAPU sale the buyer deposits the PPN itself, so charging it in `taxes`
+	as well as carrying it in `eil_govt_charges` counts it twice: the invoice
+	ends up with an output-VAT liability we do not owe, and the receipt can no
+	longer be balanced (the payment hook expects net + PPN, but the bendahara
+	only ever pays net). A sales rep picking their usual "PPN 11%" template on
+	the order is the normal way this arrives, so fix it here rather than asking
+	them to know. Anything that is not output VAT is left exactly as it was."""
+	rows = doc.get("taxes") or []
+	if not rows:
+		return
+	accounts = _output_vat_accounts(doc.company)
+	if not accounts:
+		return
+	removed = [r for r in rows if r.account_head in accounts]
+	if not removed:
+		return
+	doc.set("taxes", [r for r in rows if r.account_head not in accounts])
+	for i, row in enumerate(doc.get("taxes") or [], start=1):
+		row.idx = i
+	frappe.msgprint(
+		frappe._("Removed {0} from Taxes and Charges: this is a government (pemungut/WAPU) buyer, so the PPN is collected by the buyer and is shown under Government Tax instead.").format(
+			", ".join(sorted({r.account_head for r in removed}))
+		),
+		title=frappe._("Government buyer"),
+		indicator="orange",
+	)
+
+
+def _dpp_base(doc):
+	"""The value actually billed, excluding output VAT — the base for PPN/PPh 22.
+
+	Not `base_net_total`: other charges in Taxes and Charges (freight/Ongkos
+	Kirim, packing) are part of what the buyer is billed and therefore part of
+	the DPP. Output VAT has already been stripped by this point, so the grand
+	total is exactly that value. `eil_govt_charges` never touch the totals, so
+	this cannot feed on itself."""
+	return flt(doc.base_grand_total) or flt(doc.base_net_total)
+
+
+def _derive_pemungut(doc):
+	"""Set the flag from the buyer only when there is no decision on record yet.
+
+	An invoice raised directly (no order to inherit it from) still needs the fact,
+	but an accountant who deliberately UNticks WAPU must have that stick: the
+	stored field can't tell an unticked box from an untouched one, so re-deriving
+	on every save would flip it back on — and rebuild the charges with it."""
+	from erpbio_indonesia_localization.doc_events.sales_order import is_pemungut_customer
+
+	if not doc.get("customer"):
+		return
+	if doc.is_new():
+		if not doc.get("eil_is_pemungut") and is_pemungut_customer(doc.customer):
+			doc.eil_is_pemungut = 1
+		return
+	# Existing invoice: the flag describes the previous buyer only if the customer
+	# changed — otherwise leave whatever is there alone.
+	if frappe.db.get_value("Sales Invoice", doc.name, "customer") == doc.customer:
+		return
+	doc.eil_is_pemungut = 1 if is_pemungut_customer(doc.customer) else 0
+
+
 def _default_template(doc):
 	"""The customer's own template, else the company default."""
 	if doc.get("customer"):
@@ -73,20 +169,20 @@ def _default_template(doc):
 
 
 def validate(doc, method=None):
-	"""Runs after the totals are computed, so base_net_total is final.
+	"""Runs after the totals are computed, so the DPP base is final.
 
-	A row with a rate is computed from the net total; a row with no rate keeps
-	whatever amount was entered, which is how a one-off figure is overridden."""
+	A row with a rate is computed from the DPP; a row with no rate keeps whatever
+	amount was entered, which is how a one-off figure is overridden."""
 	if doc.get("is_return"):
 		return
 	if not doc.get("eil_is_pemungut"):
 		doc.set("eil_govt_charges", [])
 		return
+	base = _dpp_base(doc)
 	for row in _charges(doc):
+		apply_treatment_rules(row)
 		if flt(row.rate):
-			row.amount = flt(
-				flt(doc.base_net_total) * flt(row.rate) / 100.0, doc.precision("base_net_total")
-			)
+			row.amount = flt(base * flt(row.rate) / 100.0, doc.precision("base_net_total"))
 
 
 def on_submit(doc, method=None):

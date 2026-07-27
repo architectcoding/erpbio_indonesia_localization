@@ -557,6 +557,14 @@ def update_invoice_govt_charges(sales_invoice, charges):
 	# bendahara sale the customer record didn't know about; clearing them all
 	# turns the invoice back into an ordinary one.
 	doc.eil_is_pemungut = 1 if rows else 0
+	from erpbio_indonesia_localization.doc_events.sales_invoice import (
+		_dpp_base,
+		apply_treatment_rules,
+	)
+
+	# Saving a SUBMITTED invoice does not re-run the validate hook, so this path
+	# has to apply the invoice's own rules itself rather than rely on them.
+	base = _dpp_base(doc)
 	doc.set("eil_govt_charges", [])
 	for r in rows:
 		if not r.get("account"):
@@ -567,8 +575,8 @@ def update_invoice_govt_charges(sales_invoice, charges):
 		# keeps the figure that was typed (which is how an actual bukti potong is
 		# entered when it differs from the standard rate).
 		if rate:
-			amount = flt(flt(doc.base_net_total) * rate / 100.0, doc.precision("base_net_total"))
-		doc.append(
+			amount = flt(base * rate / 100.0, doc.precision("base_net_total"))
+		row = doc.append(
 			"eil_govt_charges",
 			{
 				"treatment": r.get("treatment") or "PPN Dipungut Pemungut",
@@ -576,10 +584,10 @@ def update_invoice_govt_charges(sales_invoice, charges):
 				"rate": rate,
 				"amount": amount,
 				"show_on_print": cint(r.get("show_on_print")),
-				"clear_on_payment": cint(r.get("clear_on_payment")),
 				"description": r.get("description"),
 			},
 		)
+		apply_treatment_rules(row)
 
 	if doc.docstatus == 0:
 		doc.save()

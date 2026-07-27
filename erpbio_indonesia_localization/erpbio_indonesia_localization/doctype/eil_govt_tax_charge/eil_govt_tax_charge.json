@@ -62,11 +62,12 @@
    "label": "Show on Printed Invoice"
   },
   {
-   "default": "1",
-   "description": "Cleared by a negative deduction when the receipt lands (PPN). Withholding stays a prepaid-tax asset, so leave this off for PPh 22.",
+   "default": "0",
+   "description": "Set automatically from the Treatment: PPN Dipungut Pemungut is settled by the receipt (the buyer keeps that portion and deposits it), while a government withholding stays on the books as a prepaid-tax asset.",
    "fieldname": "clear_on_payment",
    "fieldtype": "Check",
-   "label": "Clear at Payment"
+   "label": "Clear at Payment",
+   "read_only": 1
   },
   {
    "fieldname": "description",

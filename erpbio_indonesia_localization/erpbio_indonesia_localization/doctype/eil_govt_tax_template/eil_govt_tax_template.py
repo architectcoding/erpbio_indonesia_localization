@@ -4,8 +4,17 @@ from frappe.model.document import Document
 
 class EILGovtTaxTemplate(Document):
 	def validate(self):
+		self._apply_treatment_rules()
 		self._validate_accounts_belong_to_company()
 		self._enforce_single_default()
+
+	def _apply_treatment_rules(self):
+		"""Keep the stored rows consistent with their treatment, so an invoice
+		built from this template inherits the right settlement behaviour."""
+		from erpbio_indonesia_localization.doc_events.sales_invoice import apply_treatment_rules
+
+		for row in self.charges or []:
+			apply_treatment_rules(row)
 
 	def _validate_accounts_belong_to_company(self):
 		"""An account carries its own company in ERPNext, so a template pointing at

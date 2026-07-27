@@ -16,6 +16,7 @@
   "withholding_accounts",
   "pemungut_section",
   "pemungut_customer_groups",
+  "output_vat_accounts",
   "govt_tax_defaults"
  ],
  "fields": [
@@ -50,7 +51,7 @@
   },
   {
    "default": "1",
-   "description": "For non-luxury goods/services: DPP Nilai Lain = 11/12 \u00d7 selling price, so the 12% rate collects an effective 11%.",
+   "description": "For non-luxury goods/services: DPP Nilai Lain = 11/12 × selling price, so the 12% rate collects an effective 11%.",
    "fieldname": "use_dpp_nilai_lain",
    "fieldtype": "Check",
    "label": "Use DPP Nilai Lain (PMK 131/2024)"
@@ -92,6 +93,13 @@
    "fieldtype": "Table MultiSelect",
    "label": "Pemungut Customer Groups",
    "options": "EIL Pemungut Customer Group"
+  },
+  {
+   "fieldname": "output_vat_accounts",
+   "fieldtype": "Table MultiSelect",
+   "label": "Output VAT Accounts",
+   "options": "EIL Output VAT Account",
+   "description": "Accounts that represent PPN Keluaran. On a government (pemungut/WAPU) invoice, Taxes and Charges rows posting to these accounts are removed — the buyer deposits that PPN itself, so charging it again would double-count it. Other charges (freight/Ongkos Kirim, packing, handling) are never touched. Leave empty to detect output VAT automatically (account type \"Tax\" with root type \"Liability\")."
   },
   {
    "description": "Default account and rate per company for each kind of government-collected tax (Piutang PPN Bendahara, PPh 22 Dibayar di Muka). Used to pre-fill a charge the accountant adds to an invoice.",

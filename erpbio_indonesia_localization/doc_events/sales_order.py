@@ -16,11 +16,21 @@ import frappe
 
 
 def before_validate(doc, method=None):
-	# Respect an explicit choice: only derive when the user hasn't set it.
-	if doc.get("eil_is_pemungut"):
+	if not doc.get("customer"):
 		return
-	if doc.get("customer") and is_pemungut_customer(doc.customer):
-		doc.eil_is_pemungut = 1
+	if doc.is_new():
+		# Fresh order: derive from the buyer, but never clear a box someone ticked
+		# by hand (a non-government buyer can still be a pemungut in practice).
+		if not doc.get("eil_is_pemungut") and is_pemungut_customer(doc.customer):
+			doc.eil_is_pemungut = 1
+		return
+	# Existing order: re-derive ONLY when the customer itself changed, because the
+	# stored flag then describes the previous buyer. Deriving on every save would
+	# silently undo a user who deliberately UNticked the box — an unticked box and
+	# an untouched one are indistinguishable once stored.
+	if frappe.db.get_value("Sales Order", doc.name, "customer") == doc.customer:
+		return
+	doc.eil_is_pemungut = 1 if is_pemungut_customer(doc.customer) else 0
 
 
 def is_pemungut_customer(customer):
