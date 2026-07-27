@@ -1,0 +1,90 @@
+{
+ "actions": [],
+ "creation": "2026-07-27 12:00:00.000000",
+ "description": "One government-collected (pemungut/WAPU) tax charge on a Sales Invoice. Deliberately NOT a Sales Taxes and Charges row: these must never move the invoice totals, so they live outside ERPNext's tax engine and carry their real rate and amount. The reclassification entry, the payment clearing and the faktur all read this table.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "treatment",
+  "account",
+  "rate",
+  "amount",
+  "column_break_print",
+  "show_on_print",
+  "clear_on_payment",
+  "description"
+ ],
+ "fields": [
+  {
+   "default": "PPN Dipungut Pemungut",
+   "description": "PPN the buyer deposits itself, or tax the buyer withholds (PPh 22).",
+   "fieldname": "treatment",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Treatment",
+   "options": "PPN Dipungut Pemungut\nPotongan Pemerintah (Withholding)",
+   "reqd": 1
+  },
+  {
+   "description": "Where the carved-out amount is booked, e.g. Piutang PPN Bendaharawan or PPh 22 Dibayar di Muka.",
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "description": "Applied to the invoice's net total.",
+   "fieldname": "rate",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Rate (%)"
+  },
+  {
+   "description": "Computed from the rate at validate time, once the net total is final.",
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_print",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "PPN is shown on the faktur; a government withholding (PPh 22) is not.",
+   "fieldname": "show_on_print",
+   "fieldtype": "Check",
+   "label": "Show on Printed Invoice"
+  },
+  {
+   "default": "1",
+   "description": "Cleared by a negative deduction when the receipt lands (PPN). Withholding stays a prepaid-tax asset, so leave this off for PPh 22.",
+   "fieldname": "clear_on_payment",
+   "fieldtype": "Check",
+   "label": "Clear at Payment"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "label": "Description"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-27 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPbio Indonesia Localization",
+ "name": "EIL Govt Tax Charge",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

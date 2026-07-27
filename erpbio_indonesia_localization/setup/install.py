@@ -70,6 +70,13 @@ CUSTOM_FIELDS = {
 			"default": "IDN",
 			"insert_after": "eil_tax_email",
 		},
+		{
+			"fieldname": "eil_is_pemungut",
+			"label": "Government (Pemungut / WAPU)",
+			"fieldtype": "Check",
+			"insert_after": "eil_country_code",
+			"description": "This buyer collects and deposits the PPN itself (bendahara/pemungut) and withholds PPh 22. Auto-set for the customer groups listed in Indonesia Tax Settings.",
+		},
 	],
 	"Item": [
 		{
@@ -254,33 +261,45 @@ CUSTOM_FIELDS = {
 			"allow_on_submit": 1,
 			"no_copy": 1,
 		},
+		# Government (pemungut/WAPU) charges. These deliberately live OUTSIDE
+		# `taxes`: they must not move the invoice totals, so keeping them out of
+		# ERPNext's tax engine lets them carry their real rate and amount instead
+		# of a neutralised row plus shadow fields.
+		{
+			"fieldname": "eil_govt_section",
+			"label": "Government Tax (WAPU)",
+			"fieldtype": "Section Break",
+			"insert_after": "eil_wapu_journal_entry",
+			"depends_on": "eil_is_pemungut",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "eil_is_pemungut",
+			"label": "Government (Pemungut / WAPU)",
+			"fieldtype": "Check",
+			"insert_after": "eil_govt_section",
+			"description": "The buyer deposits the PPN itself and withholds PPh 22. Defaults from the customer / the source order.",
+		},
+		{
+			"fieldname": "eil_govt_charges",
+			"label": "Government Tax Charges",
+			"fieldtype": "Table",
+			"options": "EIL Govt Tax Charge",
+			"insert_after": "eil_is_pemungut",
+			"depends_on": "eil_is_pemungut",
+			"description": "Derived from Indonesia Tax Settings when the invoice is validated. Carved out of the receivable by the reclassification entry, not added to the totals.",
+		},
 	],
-	"Sales Taxes and Charges": [
+	# Government (pemungut/WAPU) sales. The flag travels with the document so a
+	# sales user only ever answers "is this a government customer?"; the charges
+	# themselves are derived on the invoice from Indonesia Tax Settings.
+	"Sales Order": [
 		{
-			"fieldname": "eil_govt_tax_treatment",
-			"label": "Government Tax Treatment",
-			"fieldtype": "Select",
-			"options": "\nPPN Dipungut Pemungut\nPotongan Pemerintah (Withholding)",
-			"insert_after": "account_head",
-			"description": "WAPU/Bendahara: 'PPN Dipungut Pemungut' books this tax as a receivable (Piutang PPN Bendahara), shown on the faktur, cleared at payment; 'Potongan Pemerintah (Withholding)' books it as a prepaid-tax asset (e.g. PPh 22 Dibayar di Muka), hidden on the printed invoice.",
-		},
-		{
-			"fieldname": "eil_wapu_rate",
-			"label": "WAPU Rate (%)",
-			"fieldtype": "Percent",
-			"insert_after": "eil_govt_tax_treatment",
-			"read_only": 1,
-			"depends_on": "eil_govt_tax_treatment",
-			"description": "The tax rate carried over from the template. ERPNext clears `rate` on an Actual-charge row, so the percentage is kept here.",
-		},
-		{
-			"fieldname": "eil_wapu_amount",
-			"label": "WAPU Amount",
-			"fieldtype": "Currency",
-			"insert_after": "eil_wapu_rate",
-			"read_only": 1,
-			"depends_on": "eil_govt_tax_treatment",
-			"description": "net_total x WAPU rate. The row itself stays inert so the invoice books gross; this amount drives the reclassification entry and the faktur.",
+			"fieldname": "eil_is_pemungut",
+			"label": "Government (Pemungut / WAPU)",
+			"fieldtype": "Check",
+			"insert_after": "taxes_and_charges",
+			"description": "The buyer deposits the PPN itself and withholds PPh 22. Defaults from the customer; the accountant applies the actual charges on the invoice.",
 		},
 	],
 }
