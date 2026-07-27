@@ -137,14 +137,29 @@ def _pemungut_ppn(si_name):
 	`clear_on_payment` is what separates the two treatments: the PPN receivable is
 	settled by the receipt (the government keeps that portion), whereas a
 	withholding like PPh 22 stays on the books as a prepaid-tax asset and must NOT
-	be cleared here."""
-	out = {}
-	for r in frappe.get_all(
+	be cleared here.
+
+	Read from the reclassification entry rather than the charge row, because the
+	entry is capped at what the receivable could hold: an invoice largely settled
+	by an advance books less PPN than the row nominally shows, and clearing the
+	nominal figure would credit a receivable that was never debited."""
+	accounts = frappe.get_all(
 		"EIL Govt Tax Charge",
 		filters={"parent": si_name, "parenttype": "Sales Invoice", "clear_on_payment": 1},
-		fields=["account", "amount"],
+		pluck="account",
+	)
+	if not accounts:
+		return {}
+	je = frappe.db.get_value("Sales Invoice", si_name, "eil_wapu_journal_entry")
+	if not je or frappe.db.get_value("Journal Entry", je, "docstatus") != 1:
+		return {}
+	out = {}
+	for r in frappe.get_all(
+		"Journal Entry Account",
+		filters={"parent": je, "account": ["in", set(accounts)]},
+		fields=["account", "debit_in_account_currency"],
 	):
-		if not flt(r.amount):
-			continue
-		out[r.account] = out.get(r.account, 0.0) + abs(flt(r.amount))
+		amount = flt(r.debit_in_account_currency)
+		if amount:
+			out[r.account] = out.get(r.account, 0.0) + amount
 	return out

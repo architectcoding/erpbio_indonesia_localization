@@ -456,6 +456,8 @@ def account_options():
 def get_invoice_govt_charges(sales_invoice):
 	"""The invoice's government charges plus what the UI needs to decide whether
 	they may still be edited."""
+	from erpbio_indonesia_localization.doc_events.sales_invoice import govt_notes
+
 	if not sales_invoice or not frappe.db.exists("Sales Invoice", sales_invoice):
 		return None
 	if not frappe.has_permission("Sales Invoice", "read", sales_invoice):
@@ -479,6 +481,7 @@ def get_invoice_govt_charges(sales_invoice):
 		"outstanding": flt(doc.outstanding_amount),
 		"can_edit": not blocker and frappe.has_permission("Sales Invoice", "write", sales_invoice),
 		"blocked_reason": blocker,
+		"notes": govt_notes(doc),
 		"charges": [
 			{
 				"name": r.name,

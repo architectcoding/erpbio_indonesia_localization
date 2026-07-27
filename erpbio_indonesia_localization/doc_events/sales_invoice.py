@@ -24,7 +24,7 @@
 # report (computed from DPP x tarif), not through the ledger.
 
 import frappe
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 PPN_TREATMENT = "PPN Dipungut Pemungut"
 
@@ -192,8 +192,43 @@ def validate(doc, method=None):
 	base = _dpp_base(doc)
 	for row in _charges(doc):
 		apply_treatment_rules(row)
-		if flt(row.rate):
-			row.amount = flt(base * flt(row.rate) / 100.0, doc.precision("base_net_total"))
+		if not flt(row.rate):
+			continue  # a hand-entered figure from the bukti potong — leave it alone
+		row.amount = flt(base * flt(row.rate) / 100.0, doc.precision("base_net_total"))
+		if not cint(row.clear_on_payment):
+			# A withholding may already have been taken when an advance was paid:
+			# the bendahara withholds when the money moves, which can be before
+			# this invoice exists. Book only what is left, or it is counted twice.
+			already = withheld_on_advances(doc, row.account)
+			if already:
+				row.amount = max(0.0, flt(row.amount) - already)
+
+
+def withheld_on_advances(doc, account):
+	"""How much of `account` the advances allocated to this invoice already took.
+
+	Matched on the ACCOUNT rather than on any new configuration: a deduction that
+	posted where this charge would post is the same tax by definition. Whether the
+	bendahara withholds at the advance or leaves it to the invoice is their choice,
+	so this has to be detected, never assumed."""
+	if not account:
+		return 0.0
+	names = [
+		a.reference_name
+		for a in (doc.get("advances") or [])
+		if a.get("reference_type") == "Payment Entry" and a.get("reference_name")
+	]
+	if not names:
+		return 0.0
+	return sum(
+		flt(r.amount)
+		for r in frappe.get_all(
+			"Payment Entry Deduction",
+			filters={"parent": ["in", names], "account": account},
+			fields=["amount"],
+		)
+		if flt(r.amount) > 0
+	)
 
 
 def on_submit(doc, method=None):
@@ -211,12 +246,98 @@ def on_cancel(doc, method=None):
 		frappe.get_doc("Journal Entry", name).cancel()
 
 
-def _build_reclassification(doc):
+def _postable_rows(doc):
+	"""[(row, amount)] to post, capped at what is still in the receivable.
+
+	The entry carves the government-handled portions OUT of the receivable, so it
+	can only ever move what the receivable still holds. An advance may already
+	have settled most (or all) of the invoice, and then there is nothing left to
+	carve — nor anything to carve it FOR: the cash is in, so no PPN claim is
+	pending. Without the cap the entry simply fails, because it references the
+	invoice and ERPNext refuses a reference larger than the outstanding amount.
+
+	The withholding is taken first. It is genuinely uncollectible — the buyer
+	keeps it — whereas the PPN receivable is a presentation of money still to
+	arrive, so it is the part that should give way when room runs out."""
+	if doc.get("is_return"):
+		return []
 	rows = [r for r in _charges(doc) if flt(r.amount)]
-	if not rows or doc.get("is_return"):
+	if not rows:
+		return []
+
+	room = flt(frappe.db.get_value("Sales Invoice", doc.name, "outstanding_amount"))
+	out = []
+	for r in sorted(rows, key=lambda r: cint(r.clear_on_payment)):
+		if room <= 0:
+			break
+		amount = min(flt(r.amount), room)
+		if amount <= 0:
+			continue
+		out.append((r, flt(amount, doc.precision("base_net_total"))))
+		room -= amount
+	return out
+
+
+def govt_notes(doc):
+	"""Plain-language reasons the posted figures differ from the nominal rates.
+
+	Both adjustments below are silent arithmetic otherwise: an accountant looking
+	at a 0 where they expected 1,500,000 should be told why without having to
+	reconstruct it from the advance."""
+	notes = []
+	fmt = frappe.format_value
+	currency = {"fieldtype": "Currency", "options": "currency"}
+
+	for row in _charges(doc):
+		if cint(row.clear_on_payment) or not flt(row.rate):
+			continue
+		already = withheld_on_advances(doc, row.account)
+		if already:
+			notes.append(
+				frappe._("{0}: {1} was already withheld on the advance, so this invoice books {2}.").format(
+					row.description or row.treatment,
+					fmt(already, currency),
+					fmt(flt(row.amount), currency),
+				)
+			)
+
+	# Only meaningful once posted. A FULLY capped invoice has no entry at all, so
+	# an empty `posted` is the interesting case, not a reason to skip.
+	if doc.docstatus == 1:
+		posted = {}
+		je = doc.get("eil_wapu_journal_entry")
+		if je and frappe.db.get_value("Journal Entry", je, "docstatus") == 1:
+			posted = {
+				r.account: flt(r.debit_in_account_currency)
+				for r in frappe.get_all(
+					"Journal Entry Account",
+					filters={"parent": je},
+					fields=["account", "debit_in_account_currency"],
+				)
+			}
+		for row in _charges(doc):
+			if not cint(row.clear_on_payment):
+				continue
+			booked = posted.get(row.account, 0.0)
+			if booked < flt(row.amount) - 0.5:
+				notes.append(
+					frappe._(
+						"{0}: {1} of {2} carried to the receivable — an advance had already settled the rest of this invoice."
+					).format(
+						row.description or row.treatment,
+						fmt(booked, currency),
+						fmt(flt(row.amount), currency),
+					)
+				)
+	return notes
+
+
+def _build_reclassification(doc):
+	rows = _postable_rows(doc)
+	if not rows:
 		return None
 
-	total = flt(sum(flt(r.amount) for r in rows), doc.precision("base_net_total"))
+	total = flt(sum(amount for _r, amount in rows), doc.precision("base_net_total"))
 	if not total:
 		return None
 
@@ -225,12 +346,12 @@ def _build_reclassification(doc):
 	je.posting_date = doc.posting_date
 	je.voucher_type = "Journal Entry"
 	je.user_remark = frappe._("Government-collected tax on {0}").format(doc.name)
-	for r in rows:
+	for r, amount in rows:
 		je.append(
 			"accounts",
 			{
 				"account": r.account,
-				"debit_in_account_currency": flt(r.amount),
+				"debit_in_account_currency": amount,
 				"cost_center": r.get("cost_center") or doc.get("cost_center"),
 			},
 		)

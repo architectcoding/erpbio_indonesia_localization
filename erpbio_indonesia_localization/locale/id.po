@@ -495,3 +495,15 @@ msgstr "Bukti Potong diterima memerlukan Pelanggan yang memotong."
 
 msgid "Received: a customer withholds from us. Issued: we withhold from a supplier."
 msgstr "Diterima: pelanggan memotong dari kita. Diterbitkan: kita memotong dari pemasok."
+
+msgid "{0}: {1} was already withheld on the advance, so this invoice books {2}."
+msgstr "{0}: {1} sudah dipotong pada uang muka, sehingga faktur ini membukukan {2}."
+
+msgid "{0}: {1} of {2} carried to the receivable — an advance had already settled the rest of this invoice."
+msgstr "{0}: {1} dari {2} dipindahkan ke piutang — uang muka sudah melunasi sisa faktur ini."
+
+msgid "This template charges an ordinary buyer {0}% output VAT but treats a government buyer's PPN as {1}%. A customer quoted {0}% would receive a faktur showing {1}%."
+msgstr "Template ini mengenakan PPN Keluaran {0}% untuk pembeli biasa, tetapi memperlakukan PPN pembeli pemerintah sebagai {1}%. Pelanggan yang ditawari {0}% akan menerima faktur bertarif {1}%."
+
+msgid "Government PPN rate differs"
+msgstr "Tarif PPN pemerintah berbeda"
