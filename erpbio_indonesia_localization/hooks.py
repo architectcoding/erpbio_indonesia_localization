@@ -36,6 +36,11 @@ doc_events = {
 		# the invoice inherits it without a sales user knowing about WAPU.
 		"before_validate": "erpbio_indonesia_localization.doc_events.sales_order.before_validate",
 	},
+	"Sales Taxes and Charges Template": {
+		# The template carries its own government variant; keep the two rates
+		# honest with each other. See doc_events/sales_taxes_and_charges_template.py.
+		"validate": "erpbio_indonesia_localization.doc_events.sales_taxes_and_charges_template.validate",
+	},
 	"Sales Invoice": {
 		# WAPU/Bendahara: keep government-collected tax rows out of the invoice
 		# totals, then carve them out of the receivable with their own entry.

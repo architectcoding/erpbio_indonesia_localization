@@ -77,15 +77,6 @@ CUSTOM_FIELDS = {
 			"insert_after": "eil_country_code",
 			"description": "This buyer collects and deposits the PPN itself (bendahara/pemungut) and withholds PPh 22. Auto-set for the customer groups listed in Indonesia Tax Settings.",
 		},
-		{
-			"fieldname": "eil_govt_tax_template",
-			"label": "Government Tax Template",
-			"fieldtype": "Link",
-			"options": "EIL Govt Tax Template",
-			"insert_after": "eil_is_pemungut",
-			"depends_on": "eil_is_pemungut",
-			"description": "Which charges this buyer applies — e.g. a bendahara that withholds PPh 22 at a different rate, or none at all. Blank uses the company default.",
-		},
 	],
 	"Item": [
 		{
@@ -292,20 +283,11 @@ CUSTOM_FIELDS = {
 			"allow_on_submit": 1,
 		},
 		{
-			"fieldname": "eil_govt_tax_template",
-			"label": "Government Tax Template",
-			"fieldtype": "Link",
-			"options": "EIL Govt Tax Template",
-			"insert_after": "eil_is_pemungut",
-			"depends_on": "eil_is_pemungut",
-			"description": "Populates the charges below. Defaults from the customer, then the company default.",
-		},
-		{
 			"fieldname": "eil_govt_charges",
 			"label": "Government Tax Charges",
 			"fieldtype": "Table",
 			"options": "EIL Govt Tax Charge",
-			"insert_after": "eil_govt_tax_template",
+			"insert_after": "eil_is_pemungut",
 			"depends_on": "eil_is_pemungut",
 			# The withheld PPh 22 is often only known exactly when the bukti potong
 			# arrives, which is after the invoice is submitted. Editing is therefore
@@ -326,6 +308,27 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Check",
 			"insert_after": "taxes_and_charges",
 			"description": "The buyer deposits the PPN itself and withholds PPh 22. Defaults from the customer; the accountant applies the actual charges on the invoice.",
+		},
+	],
+	# The government treatment lives on the SAME master the sales team already
+	# picks. A template that charges PPN 12% carries the 12% government variant
+	# beside it, so the rate a customer was quoted and the rate on their faktur
+	# cannot drift apart — which they could when the two were separate masters.
+	"Sales Taxes and Charges Template": [
+		{
+			"fieldname": "eil_govt_section",
+			"label": "Government (Pemungut / WAPU)",
+			"fieldtype": "Section Break",
+			"insert_after": "taxes",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "eil_govt_charges",
+			"label": "Government Tax Charges",
+			"fieldtype": "Table",
+			"options": "EIL Govt Tax Charge",
+			"insert_after": "eil_govt_section",
+			"description": "Applied instead of the output VAT above when the buyer is a government treasurer (pemungut/WAPU). The PPN row should carry the same rate as the output-VAT row in this template. Other charges here — freight, handling — are unaffected and still apply.",
 		},
 	],
 }

@@ -57,17 +57,39 @@ def before_validate(doc, method=None):
 	_strip_output_vat(doc)
 	if _charges(doc):
 		return  # already populated (or deliberately emptied on an existing doc)
-	template = doc.get("eil_govt_tax_template") or _default_template(doc)
-	if not template:
-		return
-	doc.eil_govt_tax_template = template
-	for row in frappe.get_all(
-		"EIL Govt Tax Charge",
-		filters={"parent": template, "parenttype": "EIL Govt Tax Template"},
-		fields=["treatment", "account", "rate", "amount", "show_on_print", "clear_on_payment", "description"],
-		order_by="idx asc",
-	):
+	for row in govt_rows_for(doc.get("taxes_and_charges"), doc.company):
 		doc.append("eil_govt_charges", row)
+
+
+def govt_rows_for(taxes_and_charges, company):
+	"""The government charges to apply, in priority order.
+
+	The selling template the sales team already picked owns them, so the PPN they
+	quoted and the PPN on the faktur are the same number by construction. An
+	invoice raised by hand has no template to inherit from, so it falls back to
+	the per-company defaults in Indonesia Tax Settings — that path is what lets an
+	accountant produce a WAPU invoice with no order behind it."""
+	if taxes_and_charges:
+		rows = frappe.get_all(
+			"EIL Govt Tax Charge",
+			filters={"parent": taxes_and_charges, "parenttype": "Sales Taxes and Charges Template"},
+			fields=["treatment", "account", "rate", "show_on_print", "clear_on_payment", "description"],
+			order_by="idx asc",
+		)
+		if rows:
+			return rows
+	settings = frappe.get_cached_doc("Indonesia Tax Settings")
+	return [
+		{
+			"treatment": d.treatment,
+			"account": d.account,
+			"rate": d.rate,
+			"description": d.description,
+			"show_on_print": 1,
+		}
+		for d in (settings.get("govt_tax_defaults") or [])
+		if d.account and (not d.get("company") or d.company == company)
+	]
 
 
 def _output_vat_accounts(company):
@@ -155,17 +177,6 @@ def _derive_pemungut(doc):
 	if frappe.db.get_value("Sales Invoice", doc.name, "customer") == doc.customer:
 		return
 	doc.eil_is_pemungut = 1 if is_pemungut_customer(doc.customer) else 0
-
-
-def _default_template(doc):
-	"""The customer's own template, else the company default."""
-	if doc.get("customer"):
-		own = frappe.db.get_value("Customer", doc.customer, "eil_govt_tax_template")
-		if own:
-			return own
-	return frappe.db.get_value(
-		"EIL Govt Tax Template", {"company": doc.company, "is_default": 1, "disabled": 0}, "name"
-	)
 
 
 def validate(doc, method=None):

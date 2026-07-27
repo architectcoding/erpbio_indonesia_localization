@@ -472,7 +472,6 @@ def get_invoice_govt_charges(sales_invoice):
 		"is_pemungut": cint(doc.get("eil_is_pemungut")),
 		"treatments": _govt_treatments(),
 		"defaults": govt_tax_defaults(doc.company),
-		"template": doc.get("eil_govt_tax_template"),
 		"journal_entry": doc.get("eil_wapu_journal_entry"),
 		"docstatus": doc.docstatus,
 		"net_total": flt(doc.base_net_total),
