@@ -13,7 +13,9 @@
   "dpp_numerator",
   "dpp_denominator",
   "withholding_section",
-  "withholding_accounts"
+  "withholding_accounts",
+  "pemungut_section",
+  "pemungut_customer_groups"
  ],
  "fields": [
   {
@@ -22,11 +24,11 @@
    "label": "e-Faktur (Coretax)"
   },
   {
+   "description": "Applied to Sales Invoices that don't set one. 01 = normal sale.",
    "fieldname": "default_transaction_code",
    "fieldtype": "Link",
    "label": "Default Transaction Code",
-   "options": "Coretax Transaction Code",
-   "description": "Applied to Sales Invoices that don't set one. 01 = normal sale."
+   "options": "Coretax Transaction Code"
   },
   {
    "default": "IDN",
@@ -40,17 +42,17 @@
   },
   {
    "default": "12",
+   "description": "Statutory VAT rate stated on the faktur (12% since Jan 2025).",
    "fieldname": "tarif_ppn",
    "fieldtype": "Percent",
-   "label": "Tarif PPN (%)",
-   "description": "Statutory VAT rate stated on the faktur (12% since Jan 2025)."
+   "label": "Tarif PPN (%)"
   },
   {
    "default": "1",
+   "description": "For non-luxury goods/services: DPP Nilai Lain = 11/12 \u00d7 selling price, so the 12% rate collects an effective 11%.",
    "fieldname": "use_dpp_nilai_lain",
    "fieldtype": "Check",
-   "label": "Use DPP Nilai Lain (PMK 131/2024)",
-   "description": "For non-luxury goods/services: DPP Nilai Lain = 11/12 × selling price, so the 12% rate collects an effective 11%."
+   "label": "Use DPP Nilai Lain (PMK 131/2024)"
   },
   {
    "default": "11",
@@ -72,11 +74,23 @@
    "label": "Withholding (Bukti Potong Automation)"
   },
   {
+   "description": "When a submitted Payment Entry has a deduction row using one of these accounts, an Expected Bukti Potong is created automatically.",
    "fieldname": "withholding_accounts",
    "fieldtype": "Table",
    "label": "Withholding Deduction Accounts",
-   "options": "EIL Withholding Account",
-   "description": "When a submitted Payment Entry has a deduction row using one of these accounts, an Expected Bukti Potong is created automatically."
+   "options": "EIL Withholding Account"
+  },
+  {
+   "fieldname": "pemungut_section",
+   "fieldtype": "Section Break",
+   "label": "Government (Pemungut / WAPU)"
+  },
+  {
+   "description": "Customers in these groups are treated as government treasurers, so their orders and invoices are flagged automatically. A customer can still be flagged individually.",
+   "fieldname": "pemungut_customer_groups",
+   "fieldtype": "Table MultiSelect",
+   "label": "Pemungut Customer Groups",
+   "options": "EIL Pemungut Customer Group"
   }
  ],
  "issingle": 1,

@@ -31,6 +31,11 @@ doc_events = {
 		"on_submit": "erpbio_indonesia_localization.doc_events.payment_entry.on_submit",
 		"on_cancel": "erpbio_indonesia_localization.doc_events.payment_entry.on_cancel",
 	},
+	"Sales Order": {
+		# Carry the government/pemungut fact from the customer onto the order, so
+		# the invoice inherits it without a sales user knowing about WAPU.
+		"before_validate": "erpbio_indonesia_localization.doc_events.sales_order.before_validate",
+	},
 	"Sales Invoice": {
 		# WAPU/Bendahara: keep government-collected tax rows out of the invoice
 		# totals, then carve them out of the receivable with their own entry.

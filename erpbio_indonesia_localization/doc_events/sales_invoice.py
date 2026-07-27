@@ -36,7 +36,15 @@ def _charges(doc):
 def before_validate(doc, method=None):
 	"""Populate the charges from a template the first time, so the accountant has
 	rows to adjust rather than a blank table."""
-	if doc.get("is_return") or not doc.get("eil_is_pemungut"):
+	if doc.get("is_return"):
+		return
+	# An invoice raised directly (no order to inherit from) still needs the fact.
+	if not doc.get("eil_is_pemungut") and doc.get("customer"):
+		from erpbio_indonesia_localization.doc_events.sales_order import is_pemungut_customer
+
+		if is_pemungut_customer(doc.customer):
+			doc.eil_is_pemungut = 1
+	if not doc.get("eil_is_pemungut"):
 		return
 	if _charges(doc):
 		return  # already populated (or deliberately emptied on an existing doc)
