@@ -77,6 +77,15 @@ CUSTOM_FIELDS = {
 			"insert_after": "eil_country_code",
 			"description": "This buyer collects and deposits the PPN itself (bendahara/pemungut) and withholds PPh 22. Auto-set for the customer groups listed in Indonesia Tax Settings.",
 		},
+		{
+			"fieldname": "eil_govt_tax_template",
+			"label": "Government Tax Template",
+			"fieldtype": "Link",
+			"options": "EIL Govt Tax Template",
+			"insert_after": "eil_is_pemungut",
+			"depends_on": "eil_is_pemungut",
+			"description": "Which charges this buyer applies — e.g. a bendahara that withholds PPh 22 at a different rate, or none at all. Blank uses the company default.",
+		},
 	],
 	"Item": [
 		{
@@ -281,13 +290,22 @@ CUSTOM_FIELDS = {
 			"description": "The buyer deposits the PPN itself and withholds PPh 22. Defaults from the customer / the source order.",
 		},
 		{
+			"fieldname": "eil_govt_tax_template",
+			"label": "Government Tax Template",
+			"fieldtype": "Link",
+			"options": "EIL Govt Tax Template",
+			"insert_after": "eil_is_pemungut",
+			"depends_on": "eil_is_pemungut",
+			"description": "Populates the charges below. Defaults from the customer, then the company default.",
+		},
+		{
 			"fieldname": "eil_govt_charges",
 			"label": "Government Tax Charges",
 			"fieldtype": "Table",
 			"options": "EIL Govt Tax Charge",
-			"insert_after": "eil_is_pemungut",
+			"insert_after": "eil_govt_tax_template",
 			"depends_on": "eil_is_pemungut",
-			"description": "Derived from Indonesia Tax Settings when the invoice is validated. Carved out of the receivable by the reclassification entry, not added to the totals.",
+			"description": "Populated from the template, then editable per invoice. A row with a rate recomputes its amount from the net total; a row with no rate keeps the amount you type. Carved out of the receivable by the reclassification entry, never added to the totals.",
 		},
 	],
 	# Government (pemungut/WAPU) sales. The flag travels with the document so a
