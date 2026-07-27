@@ -26,6 +26,7 @@
   "section_certificate",
   "bp_number",
   "bp_date",
+  "bp_file",
   "col_2",
   "notes"
  ],
@@ -164,6 +165,12 @@
    "fieldname": "bp_date",
    "fieldtype": "Date",
    "label": "Bukti Potong Date"
+  },
+  {
+   "fieldname": "bp_file",
+   "fieldtype": "Attach",
+   "label": "Certificate File",
+   "description": "The bukti potong document itself — the scan or PDF that evidences the withholding."
   },
   {
    "fieldname": "col_2",

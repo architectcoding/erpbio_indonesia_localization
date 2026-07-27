@@ -61,9 +61,15 @@
 				<tbody>
 					<tr v-for="row in rows" :key="row.name"
 						class="cursor-pointer border-b border-outline-gray-1 last:border-0 hover:bg-surface-gray-1"
-						@click="openEdit(row)">
-						<td class="px-3 py-2 font-medium text-ink-gray-8"
-							v-doc-preview="{ doctype: 'Bukti Potong', name: row.name }">{{ row.name }}</td>
+						@click="open(row)">
+						<td class="px-3 py-2 font-medium text-ink-gray-8">
+							<span class="inline-flex items-center gap-1.5"
+								v-doc-preview="{ doctype: 'Bukti Potong', name: row.name }">
+								{{ row.name }}
+								<FeatherIcon v-if="row.bp_file" name="paperclip" class="h-3 w-3 text-ink-gray-4"
+									:title="__('Certificate attached')" />
+							</span>
+						</td>
 						<td class="max-w-[13rem] truncate px-3 py-2 text-ink-gray-7"
 							v-doc-preview="partyPreview(row)">{{ tab === "Received" ? row.customer : row.supplier }}</td>
 						<td class="px-3 py-2 text-ink-gray-7">{{ row.tax_type }}</td>
@@ -151,9 +157,12 @@
 <script setup>
 import DatePickerPopover from "@/components/DatePickerPopover.vue"
 import { computed, inject, reactive, ref } from "vue"
+import { useRouter } from "vue-router"
 import { call } from "frappe-ui"
+import { formatCurrency } from "@/utils/format"
 
 const __ = inject("$translate")
+const router = useRouter()
 
 const tab = ref("Received")
 const rows = ref([])
@@ -185,7 +194,7 @@ function blank() {
 	}
 }
 function money(v) {
-	return new Intl.NumberFormat("id-ID").format(v || 0)
+	return formatCurrency(v)
 }
 function total(statuses) {
 	const set = statuses ? (Array.isArray(statuses) ? statuses : statuses.value) : null
@@ -223,20 +232,25 @@ function openNew() {
 	errorMessage.value = ""
 	show.value = true
 }
-function openEdit(row) {
-	Object.assign(form, blank(), row)
-	errorMessage.value = ""
-	show.value = true
+// Editing (and the certificate's attachments) lives on the detail page — the
+// dialog here stays the quick-entry path for a brand-new certificate.
+function open(row) {
+	router.push({ name: "BuktiPotongDetail", params: { name: row.name } })
 }
 
 async function save() {
 	busy.value = "save"
 	errorMessage.value = ""
 	try {
-		await call("erpbio_indonesia_localization.api.tax.save_bukti_potong", {
+		const r = await call("erpbio_indonesia_localization.api.tax.save_bukti_potong", {
 			payload: JSON.stringify({ ...form }),
 		})
 		show.value = false
+		if (!form.name) {
+			// straight to the detail page, where the certificate file goes on
+			router.push({ name: "BuktiPotongDetail", params: { name: r.name } })
+			return
+		}
 		await load()
 	} catch (e) {
 		errorMessage.value = e?.messages?.[0] || __("Could not save.")

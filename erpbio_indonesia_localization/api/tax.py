@@ -196,6 +196,7 @@ def list_bukti_potong(direction=None, start=0, page_length=50):
 			"tax_amount",
 			"bp_number",
 			"bp_date",
+			"bp_file",
 			"status",
 		],
 		order_by="creation desc",
@@ -233,12 +234,94 @@ def save_bukti_potong(payload):
 		"tax_amount",
 		"bp_number",
 		"bp_date",
+		"bp_file",
 		"notes",
 	):
 		if field in payload:
 			doc.set(field, payload[field])
 	doc.save()
 	return {"name": doc.name, "status": doc.status, "tax_amount": flt(doc.tax_amount)}
+
+
+BP_FIELDS = (
+	"company",
+	"direction",
+	"customer",
+	"supplier",
+	"tax_type",
+	"tax_object_code",
+	"sales_invoice",
+	"payment_entry",
+	"withholding_date",
+	"status",
+	"gross_amount",
+	"rate",
+	"tax_amount",
+	"bp_number",
+	"bp_date",
+	"bp_file",
+	"notes",
+	"auto_created",
+)
+
+
+def _bp_attachments(name):
+	"""Every file filed against the certificate — the scan itself plus whatever
+	else came with it (a corrected bupot, proof of payment)."""
+	return frappe.get_all(
+		"File",
+		filters={"attached_to_doctype": "Bukti Potong", "attached_to_name": name},
+		fields=["name", "file_name", "file_url", "is_private", "file_size", "creation"],
+		order_by="creation asc",
+	)
+
+
+@frappe.whitelist()
+def get_bukti_potong(name):
+	_check("Bukti Potong")
+	doc = frappe.get_doc("Bukti Potong", name)
+	out = {"name": doc.name, "docstatus": doc.docstatus}
+	for field in BP_FIELDS:
+		value = doc.get(field)
+		out[field] = flt(value) if field in ("gross_amount", "rate", "tax_amount") else value
+	return {
+		"doc": out,
+		"attachments": _bp_attachments(name),
+		"can_write": frappe.has_permission("Bukti Potong", "write", doc=doc),
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+def remove_bukti_potong_attachment(name, file):
+	"""Detach a file. Gated on write of the *certificate*, not of File, so the
+	frontend never needs the generic delete surface."""
+	_check("Bukti Potong", "write")
+	row = frappe.db.get_value(
+		"File",
+		{"name": file, "attached_to_doctype": "Bukti Potong", "attached_to_name": name},
+		["name", "file_url"],
+		as_dict=True,
+	)
+	if not row:
+		frappe.throw(_("That file is not attached to {0}.").format(name))
+	# Don't leave bp_file pointing at a file that no longer exists.
+	if frappe.db.get_value("Bukti Potong", name, "bp_file") == row.file_url:
+		frappe.db.set_value("Bukti Potong", name, "bp_file", None)
+	frappe.delete_doc("File", row.name, ignore_permissions=True)
+	return {"attachments": _bp_attachments(name), "bp_file": frappe.db.get_value("Bukti Potong", name, "bp_file")}
+
+
+@frappe.whitelist(methods=["POST"])
+def set_bukti_potong_certificate(name, file_url=None):
+	"""Promote one of the attached files to *the* certificate (what prints and
+	what the list flags)."""
+	_check("Bukti Potong", "write")
+	if file_url and not frappe.db.exists(
+		"File", {"file_url": file_url, "attached_to_doctype": "Bukti Potong", "attached_to_name": name}
+	):
+		frappe.throw(_("That file is not attached to {0}.").format(name))
+	frappe.db.set_value("Bukti Potong", name, "bp_file", file_url or None)
+	return {"bp_file": file_url or None}
 
 
 @frappe.whitelist()

@@ -12,6 +12,12 @@ const routes = [
 	{ path: "/reports/ppn-masukan", name: "PpnMasukan", component: () => import("@/pages/PpnMasukan.vue") },
 	{ path: "/reports/spt-masa", name: "SptMasa", component: () => import("@/pages/SptMasa.vue") },
 	{ path: "/bukti-potong", name: "BuktiPotong", component: () => import("@/pages/BuktiPotong.vue") },
+	{
+		path: "/bukti-potong/:name",
+		name: "BuktiPotongDetail",
+		component: () => import("@/pages/BuktiPotongDetail.vue"),
+		props: true,
+	},
 	{ path: "/settings", name: "Settings", component: () => import("@/pages/Settings.vue") },
 ]
 

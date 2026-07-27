@@ -3,3 +3,21 @@
 body {
 	-webkit-tap-highlight-color: transparent;
 }
+
+/* Document links read as near-black text with a hairline underline rather than
+   blue — the blue token was too light to read against white. Overriding the
+   token (not every class use) flips every link in the app; ink-gray-9 tracks
+   the theme on its own. Mirrors erpbio-accounting. */
+:root,
+[data-theme="dark"] {
+	--ink-blue-link: var(--ink-gray-9);
+}
+
+.text-ink-blue-link {
+	text-decoration-line: underline;
+	text-decoration-color: var(--outline-gray-3);
+	text-underline-offset: 2px;
+}
+.text-ink-blue-link:hover {
+	text-decoration-color: var(--ink-gray-7);
+}

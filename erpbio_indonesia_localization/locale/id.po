@@ -513,3 +513,72 @@ msgstr "Mengembalikan {0} ke Pajak dan Biaya: penjualan ini bukan lagi penjualan
 
 msgid "Ordinary sale"
 msgstr "Penjualan biasa"
+
+msgid "Certificate & Attachments"
+msgstr "Sertifikat & Lampiran"
+
+msgid "Attach File"
+msgstr "Lampirkan Berkas"
+
+msgid "Certificate"
+msgstr "Sertifikat"
+
+msgid "Certificate Details"
+msgstr "Rincian Bukti Potong"
+
+msgid "Mark as the certificate"
+msgstr "Tandai sebagai sertifikat"
+
+msgid "No file yet. Attach the certificate you issued, so the reported PPh has its evidence on file."
+msgstr "Belum ada berkas. Lampirkan bukti potong yang Anda terbitkan agar PPh yang dilaporkan memiliki buktinya."
+
+msgid "No file yet. Attach the certificate the customer issued — it is the evidence for your prepaid-tax credit."
+msgstr "Belum ada berkas. Lampirkan bukti potong yang diterbitkan pelanggan — itulah bukti kredit pajak dibayar di muka Anda."
+
+msgid "Certificate attached"
+msgstr "Sertifikat terlampir"
+
+msgid "Attached {0} file(s)."
+msgstr "{0} berkas dilampirkan."
+
+msgid "Remove {0}?"
+msgstr "Hapus {0}?"
+
+msgid "Could not attach the file."
+msgstr "Tidak dapat melampirkan berkas."
+
+msgid "Could not mark the certificate."
+msgstr "Tidak dapat menandai sertifikat."
+
+msgid "Could not remove the file."
+msgstr "Tidak dapat menghapus berkas."
+
+msgid "Could not load this certificate."
+msgstr "Tidak dapat memuat bukti potong ini."
+
+msgid "That file is not attached to {0}."
+msgstr "Berkas tersebut tidak terlampir pada {0}."
+
+msgid "Gross (DPP)"
+msgstr "Bruto (DPP)"
+
+msgid "Auto-created"
+msgstr "Dibuat otomatis"
+
+msgid "References"
+msgstr "Referensi"
+
+msgid "Company"
+msgstr "Perusahaan"
+
+msgid "Sales Invoice"
+msgstr "Faktur Penjualan"
+
+msgid "Payment Entry"
+msgstr "Entri Pembayaran"
+
+msgid "Save"
+msgstr "Simpan"
+
+msgid "Loading…"
+msgstr "Memuat…"
