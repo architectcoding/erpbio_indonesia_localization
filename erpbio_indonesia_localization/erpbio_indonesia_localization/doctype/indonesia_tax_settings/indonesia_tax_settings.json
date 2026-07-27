@@ -15,7 +15,8 @@
   "withholding_section",
   "withholding_accounts",
   "pemungut_section",
-  "pemungut_customer_groups"
+  "pemungut_customer_groups",
+  "govt_tax_defaults"
  ],
  "fields": [
   {
@@ -91,6 +92,13 @@
    "fieldtype": "Table MultiSelect",
    "label": "Pemungut Customer Groups",
    "options": "EIL Pemungut Customer Group"
+  },
+  {
+   "description": "Default account and rate per company for each kind of government-collected tax (Piutang PPN Bendahara, PPh 22 Dibayar di Muka). Used to pre-fill a charge the accountant adds to an invoice.",
+   "fieldname": "govt_tax_defaults",
+   "fieldtype": "Table",
+   "label": "Government Tax Defaults",
+   "options": "EIL Govt Tax Default"
   }
  ],
  "issingle": 1,

@@ -287,7 +287,9 @@ CUSTOM_FIELDS = {
 			"label": "Government (Pemungut / WAPU)",
 			"fieldtype": "Check",
 			"insert_after": "eil_govt_section",
-			"description": "The buyer deposits the PPN itself and withholds PPh 22. Defaults from the customer / the source order.",
+			"description": "The buyer deposits the PPN itself and withholds PPh 22. Defaults from the customer / the source order, and can be set on an invoice raised by hand.",
+			# Set alongside the charges, which are themselves allow_on_submit.
+			"allow_on_submit": 1,
 		},
 		{
 			"fieldname": "eil_govt_tax_template",

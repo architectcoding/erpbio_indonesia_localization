@@ -462,14 +462,16 @@ def get_invoice_govt_charges(sales_invoice):
 		frappe.throw(frappe._("Not permitted"), frappe.PermissionError)
 
 	doc = frappe.get_doc("Sales Invoice", sales_invoice)
-	if not doc.get("eil_is_pemungut"):
-		return None
-
 	blocker = _edit_blocker(doc)
+	# Returned even when the invoice isn't flagged, so an accountant can add
+	# government tax to an invoice raised by hand — the buyer being a bendahara
+	# isn't always known when the customer record was set up.
 	return {
 		"sales_invoice": doc.name,
 		"currency": doc.currency,
-		"is_pemungut": 1,
+		"is_pemungut": cint(doc.get("eil_is_pemungut")),
+		"treatments": _govt_treatments(),
+		"defaults": govt_tax_defaults(doc.company),
 		"template": doc.get("eil_govt_tax_template"),
 		"journal_entry": doc.get("eil_wapu_journal_entry"),
 		"docstatus": doc.docstatus,
@@ -492,6 +494,28 @@ def get_invoice_govt_charges(sales_invoice):
 			for r in doc.get("eil_govt_charges") or []
 		],
 	}
+
+
+def _govt_treatments():
+	"""The accounting behaviours, read off the field rather than hardcoded here."""
+	f = frappe.get_meta("EIL Govt Tax Charge").get_field("treatment")
+	return [o for o in ((f.options or "").split("\n") if f else []) if o]
+
+
+@frappe.whitelist()
+def govt_tax_defaults(company=None):
+	"""Per-company default account/rate per treatment, from Indonesia Tax Settings.
+	These only pre-fill a new charge row; the invoice keeps its own copy, so
+	changing a default never rewrites tax already booked."""
+	rows = frappe.get_all(
+		"EIL Govt Tax Default",
+		filters={"parenttype": "Indonesia Tax Settings"},
+		fields=["company", "treatment", "description", "account", "rate"],
+		order_by="idx asc",
+	)
+	if company:
+		rows = [r for r in rows if r.company == company]
+	return rows
 
 
 def _edit_blocker(doc):
@@ -529,6 +553,10 @@ def update_invoice_govt_charges(sales_invoice, charges):
 		frappe.throw(blocker)
 
 	rows = frappe.parse_json(charges) if isinstance(charges, str) else (charges or [])
+	# Adding charges to an invoice raised by hand is how an accountant flags a
+	# bendahara sale the customer record didn't know about; clearing them all
+	# turns the invoice back into an ordinary one.
+	doc.eil_is_pemungut = 1 if rows else 0
 	doc.set("eil_govt_charges", [])
 	for r in rows:
 		if not r.get("account"):

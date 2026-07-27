@@ -1,0 +1,63 @@
+{
+ "actions": [],
+ "creation": "2026-07-27 14:00:00.000000",
+ "description": "Per-company default account and rate for one kind of government-collected tax, so an accountant adding a charge doesn't have to remember which account it books to.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["company", "treatment", "description", "account", "rate"],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "default": "PPN Dipungut Pemungut",
+   "description": "Governs the accounting behaviour: 'PPN Dipungut Pemungut' is a receivable cleared when the money arrives; 'Potongan Pemerintah' is a prepaid-tax asset that stays.",
+   "fieldname": "treatment",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Treatment",
+   "options": "PPN Dipungut Pemungut\nPotongan Pemerintah (Withholding)",
+   "reqd": 1
+  },
+  {
+   "description": "What appears on the faktur, e.g. 'PPN 11%'. Free text, so a rate change needs no code.",
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Description"
+  },
+  {
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "description": "Applied to the invoice's net total.",
+   "fieldname": "rate",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Rate (%)"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-27 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPbio Indonesia Localization",
+ "name": "EIL Govt Tax Default",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
