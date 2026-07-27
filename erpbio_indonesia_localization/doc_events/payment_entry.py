@@ -131,15 +131,20 @@ def before_validate(doc, method=None):
 
 
 def _pemungut_ppn(si_name):
-	"""{receivable_account: total PPN} for the invoice's PPN-Dipungut-Pemungut rows."""
+	"""{receivable_account: amount} for the invoice's government charges that clear
+	when the money arrives.
+
+	`clear_on_payment` is what separates the two treatments: the PPN receivable is
+	settled by the receipt (the government keeps that portion), whereas a
+	withholding like PPh 22 stays on the books as a prepaid-tax asset and must NOT
+	be cleared here."""
 	out = {}
-	for t in frappe.get_all(
-		"Sales Taxes and Charges",
-		filters={"parent": si_name, "parenttype": "Sales Invoice",
-				 "eil_govt_tax_treatment": "PPN Dipungut Pemungut"},
-		# the row itself is inert (Actual 0) so the invoice books gross —
-		# eil_wapu_amount is where the real figure lives
-		fields=["account_head", "eil_wapu_amount"],
+	for r in frappe.get_all(
+		"EIL Govt Tax Charge",
+		filters={"parent": si_name, "parenttype": "Sales Invoice", "clear_on_payment": 1},
+		fields=["account", "amount"],
 	):
-		out[t.account_head] = out.get(t.account_head, 0.0) + abs(flt(t.eil_wapu_amount))
+		if not flt(r.amount):
+			continue
+		out[r.account] = out.get(r.account, 0.0) + abs(flt(r.amount))
 	return out

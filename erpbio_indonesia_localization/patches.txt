@@ -4,3 +4,4 @@
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
+erpbio_indonesia_localization.patches.migrate_wapu_rows_to_govt_charges
