@@ -7,7 +7,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 
 def _check(doctype, ptype="read"):
@@ -441,3 +441,142 @@ def account_options():
 		order_by="name",
 		limit_page_length=0,
 	)
+
+
+# --- Government (pemungut/WAPU) charges on a Sales Invoice ---------------------
+#
+# Exposed for the accounting SPA, which has no other way to show WHY a pemungut
+# invoice's outstanding is lower than its grand total. Editing is allowed after
+# submit because the withheld PPh 22 is frequently only known exactly once the
+# bukti potong arrives — but every write re-posts the reclassification entry, so
+# the table and the ledger cannot drift apart.
+
+
+@frappe.whitelist()
+def get_invoice_govt_charges(sales_invoice):
+	"""The invoice's government charges plus what the UI needs to decide whether
+	they may still be edited."""
+	if not sales_invoice or not frappe.db.exists("Sales Invoice", sales_invoice):
+		return None
+	if not frappe.has_permission("Sales Invoice", "read", sales_invoice):
+		frappe.throw(frappe._("Not permitted"), frappe.PermissionError)
+
+	doc = frappe.get_doc("Sales Invoice", sales_invoice)
+	if not doc.get("eil_is_pemungut"):
+		return None
+
+	blocker = _edit_blocker(doc)
+	return {
+		"sales_invoice": doc.name,
+		"currency": doc.currency,
+		"is_pemungut": 1,
+		"template": doc.get("eil_govt_tax_template"),
+		"journal_entry": doc.get("eil_wapu_journal_entry"),
+		"docstatus": doc.docstatus,
+		"net_total": flt(doc.base_net_total),
+		"grand_total": flt(doc.base_grand_total),
+		"outstanding": flt(doc.outstanding_amount),
+		"can_edit": not blocker and frappe.has_permission("Sales Invoice", "write", sales_invoice),
+		"blocked_reason": blocker,
+		"charges": [
+			{
+				"name": r.name,
+				"treatment": r.treatment,
+				"account": r.account,
+				"rate": flt(r.rate),
+				"amount": flt(r.amount),
+				"show_on_print": cint(r.show_on_print),
+				"clear_on_payment": cint(r.clear_on_payment),
+				"description": r.description,
+			}
+			for r in doc.get("eil_govt_charges") or []
+		],
+	}
+
+
+def _edit_blocker(doc):
+	"""Why the charges are frozen, or None when they can still be changed.
+
+	A receipt already cleared the PPN receivable using these figures, so changing
+	them afterwards would leave the payment pointing at an amount that no longer
+	exists. The payment has to be cancelled first."""
+	if doc.docstatus == 2:
+		return frappe._("This invoice is cancelled.")
+	if doc.docstatus == 1:
+		paid = frappe.get_all(
+			"Payment Entry Reference",
+			filters={"reference_doctype": "Sales Invoice", "reference_name": doc.name, "docstatus": 1},
+			limit=1,
+		)
+		if paid:
+			return frappe._(
+				"A payment has already been applied to this invoice. Cancel it before changing the government tax."
+			)
+	return None
+
+
+@frappe.whitelist(methods=["POST"])
+def update_invoice_govt_charges(sales_invoice, charges):
+	"""Replace the charges and, on a submitted invoice, re-post the
+	reclassification entry so the ledger follows the table."""
+	from erpbio_indonesia_localization.doc_events.sales_invoice import _build_reclassification
+
+	if not frappe.has_permission("Sales Invoice", "write", sales_invoice):
+		frappe.throw(frappe._("Not permitted"), frappe.PermissionError)
+	doc = frappe.get_doc("Sales Invoice", sales_invoice)
+	blocker = _edit_blocker(doc)
+	if blocker:
+		frappe.throw(blocker)
+
+	rows = frappe.parse_json(charges) if isinstance(charges, str) else (charges or [])
+	doc.set("eil_govt_charges", [])
+	for r in rows:
+		if not r.get("account"):
+			continue
+		amount = flt(r.get("amount"))
+		rate = flt(r.get("rate"))
+		# Same rule as the invoice hook: a rate recomputes the amount, a blank rate
+		# keeps the figure that was typed (which is how an actual bukti potong is
+		# entered when it differs from the standard rate).
+		if rate:
+			amount = flt(flt(doc.base_net_total) * rate / 100.0, doc.precision("base_net_total"))
+		doc.append(
+			"eil_govt_charges",
+			{
+				"treatment": r.get("treatment") or "PPN Dipungut Pemungut",
+				"account": r["account"],
+				"rate": rate,
+				"amount": amount,
+				"show_on_print": cint(r.get("show_on_print")),
+				"clear_on_payment": cint(r.get("clear_on_payment")),
+				"description": r.get("description"),
+			},
+		)
+
+	if doc.docstatus == 0:
+		doc.save()
+	else:
+		# allow_on_submit: write the rows, then rebuild the entry they justify.
+		doc.flags.ignore_validate_update_after_submit = True
+		doc.save(ignore_permissions=True)
+		_repost_reclassification(doc)
+
+	return get_invoice_govt_charges(sales_invoice)
+
+
+def _repost_reclassification(doc):
+	"""Cancel the existing entry and post a fresh one. The cancelled entry is left
+	in place: it is the audit trail for what the invoice used to claim."""
+	from erpbio_indonesia_localization.doc_events.sales_invoice import _build_reclassification
+
+	old = doc.get("eil_wapu_journal_entry")
+	if old and frappe.db.exists("Journal Entry", old):
+		# Drop the link before cancelling: while the submitted invoice still points
+		# at the entry, Frappe's link check refuses to cancel it (LinkExistsError).
+		doc.db_set("eil_wapu_journal_entry", None, update_modified=False)
+		if frappe.db.get_value("Journal Entry", old, "docstatus") == 1:
+			frappe.get_doc("Journal Entry", old).cancel()
+	doc.reload()
+	new = _build_reclassification(doc)
+	doc.db_set("eil_wapu_journal_entry", new, update_modified=False)
+	return new

@@ -305,6 +305,12 @@ CUSTOM_FIELDS = {
 			"options": "EIL Govt Tax Charge",
 			"insert_after": "eil_govt_tax_template",
 			"depends_on": "eil_is_pemungut",
+			# The withheld PPh 22 is often only known exactly when the bukti potong
+			# arrives, which is after the invoice is submitted. Editing is therefore
+			# allowed post-submit, but only through update_invoice_govt_charges,
+			# which re-posts the reclassification entry so the ledger cannot drift
+			# away from this table.
+			"allow_on_submit": 1,
 			"description": "Populated from the template, then editable per invoice. A row with a rate recomputes its amount from the net total; a row with no rate keeps the amount you type. Carved out of the receivable by the reclassification entry, never added to the totals.",
 		},
 	],
