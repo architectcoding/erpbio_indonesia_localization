@@ -669,3 +669,128 @@ def _repost_reclassification(doc):
 	new = _build_reclassification(doc)
 	doc.db_set("eil_wapu_journal_entry", new, update_modified=False)
 	return new
+
+
+# ----------------------------------------------------- hover previews + DocActions
+#
+# Backends for the shared DocPreview directive and DocActions menu. Both are
+# parameterised by module on the frontend, so they point here rather than at
+# erpbio_general — this app keeps working with that app absent.
+
+# Allowlisted so a link can never be used to read an arbitrary doctype.
+_PREVIEW_DOCTYPES = {
+	"Sales Invoice",
+	"Purchase Invoice",
+	"Customer",
+	"Supplier",
+	"Coretax Faktur Export",
+	"Coretax Faktur Import",
+	"Bukti Potong",
+}
+
+
+@frappe.whitelist()
+def get_doc_preview(doctype, name):
+	"""Small hover card for a document link — the tax-relevant fields for each."""
+	if doctype not in _PREVIEW_DOCTYPES:
+		frappe.throw(_("Preview not available for {0}").format(doctype))
+	if not frappe.has_permission(doctype, "read", doc=name):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	meta = frappe.get_meta(doctype)
+	title_field = meta.title_field if meta.title_field else None
+	base = frappe.db.get_value(doctype, name, ["name"] + ([title_field] if title_field else []), as_dict=True)
+	if not base:
+		frappe.throw(_("{0} not found").format(doctype), frappe.DoesNotExistError)
+
+	fields = []
+	if doctype == "Sales Invoice":
+		# The faktur fields are the whole point of a preview here.
+		d = frappe.db.get_value(
+			doctype, name,
+			["status", "grand_total", "currency", "eil_faktur_number", "eil_faktur_status", "eil_kode_transaksi"],
+			as_dict=True,
+		)
+		fields = [
+			("Status", d.status),
+			("Total", f"{d.currency} {flt(d.grand_total):,.2f}"),
+			("Kode", d.eil_kode_transaksi),
+			("Faktur", d.eil_faktur_number),
+			("e-Faktur", d.eil_faktur_status),
+		]
+	elif doctype == "Purchase Invoice":
+		d = frappe.db.get_value(doctype, name, ["status", "grand_total", "currency", "bill_no"], as_dict=True)
+		fields = [("Status", d.status), ("Total", f"{d.currency} {flt(d.grand_total):,.2f}"), ("Supplier Bill", d.bill_no)]
+	elif doctype in ("Customer", "Supplier"):
+		party_field = "customer_name" if doctype == "Customer" else "supplier_name"
+		d = frappe.db.get_value(doctype, name, [party_field, "tax_id"], as_dict=True)
+		fields = [("Name", d.get(party_field)), ("NPWP", d.tax_id)]
+	elif doctype == "Coretax Faktur Export":
+		d = frappe.db.get_value(doctype, name, ["company", "from_date", "to_date", "status"], as_dict=True)
+		fields = [("Company", d.company), ("Period", f"{d.from_date} → {d.to_date}"), ("Status", d.status)]
+	elif doctype == "Coretax Faktur Import":
+		d = frappe.db.get_value(doctype, name, ["status", "summary"], as_dict=True)
+		fields = [("Status", d.status), ("Result", d.summary)]
+	elif doctype == "Bukti Potong":
+		d = frappe.db.get_value(
+			doctype, name, ["direction", "tax_type", "tax_amount", "bp_number", "status"], as_dict=True
+		)
+		fields = [
+			("Direction", d.direction),
+			("Type", d.tax_type),
+			("Withheld", f"{flt(d.tax_amount):,.2f}"),
+			("No", d.bp_number),
+			("Status", d.status),
+		]
+
+	return {
+		"doctype": doctype,
+		"name": name,
+		"title": (base.get(title_field) if title_field else None) or name,
+		"image": None,
+		"fields": [{"label": label, "value": value} for label, value in fields if value],
+	}
+
+
+# Only the app's own documents are printable/emailable from here.
+DOCACTION_DOCTYPES = {"Coretax Faktur Export", "Coretax Faktur Import", "Bukti Potong"}
+
+
+@frappe.whitelist()
+def get_print_formats(doctype):
+	"""Enabled print formats for a doctype, the default first, then Standard."""
+	if doctype not in DOCACTION_DOCTYPES:
+		frappe.throw(_("Unsupported doctype"))
+	frappe.has_permission(doctype, "read", throw=True)
+	default = (
+		frappe.db.get_value(
+			"Property Setter", {"doc_type": doctype, "property": "default_print_format"}, "value"
+		)
+		or frappe.get_meta(doctype).default_print_format
+	)
+	formats = frappe.get_all(
+		"Print Format", filters={"doc_type": doctype, "disabled": 0}, pluck="name", order_by="name asc"
+	)
+	ordered = ([default] if default and default in formats else []) + [f for f in formats if f != default]
+	# Frappe's built-in renderer, so there's always something to print.
+	return ordered + ["Standard"]
+
+
+@frappe.whitelist(methods=["POST"])
+def email_document(doctype, name, recipient, subject=None, message=None, print_format=None):
+	"""Email the document as a PDF attachment — e.g. sending a counterparty their
+	bukti potong."""
+	if doctype not in DOCACTION_DOCTYPES:
+		frappe.throw(_("Unsupported doctype"))
+	frappe.has_permission(doctype, "email", doc=name, throw=True)
+	if not (recipient or "").strip():
+		frappe.throw(_("Recipient is required"))
+	frappe.sendmail(
+		recipients=[recipient.strip()],
+		subject=subject or f"{doctype} {name}",
+		message=message or _("Please find {0} {1} attached.").format(_(doctype), name),
+		reference_doctype=doctype,
+		reference_name=name,
+		attachments=[frappe.attach_print(doctype, name, print_format=print_format or None)],
+	)
+	return {"sent": True, "to": recipient.strip()}

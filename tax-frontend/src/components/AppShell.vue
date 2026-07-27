@@ -34,6 +34,9 @@
 		<main class="min-w-0 flex-1 overflow-y-auto">
 			<slot />
 		</main>
+
+		<!-- Hover quick-info card for doc links; teleports itself to <body>. -->
+		<DocPreviewHost />
 	</div>
 </template>
 
@@ -41,6 +44,7 @@
 import { inject } from "vue"
 import { RouterLink, useRoute } from "vue-router"
 import { useTheme } from "@/composables/useTheme"
+import DocPreviewHost from "@/components/DocPreviewHost.vue"
 
 const session = inject("$session")
 const __ = inject("$translate")

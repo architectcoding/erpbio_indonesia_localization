@@ -62,8 +62,10 @@
 					<tr v-for="row in rows" :key="row.name"
 						class="cursor-pointer border-b border-outline-gray-1 last:border-0 hover:bg-surface-gray-1"
 						@click="openEdit(row)">
-						<td class="px-3 py-2 font-medium text-ink-gray-8">{{ row.name }}</td>
-						<td class="max-w-[13rem] truncate px-3 py-2 text-ink-gray-7">{{ tab === "Received" ? row.customer : row.supplier }}</td>
+						<td class="px-3 py-2 font-medium text-ink-gray-8"
+							v-doc-preview="{ doctype: 'Bukti Potong', name: row.name }">{{ row.name }}</td>
+						<td class="max-w-[13rem] truncate px-3 py-2 text-ink-gray-7"
+							v-doc-preview="partyPreview(row)">{{ tab === "Received" ? row.customer : row.supplier }}</td>
 						<td class="px-3 py-2 text-ink-gray-7">{{ row.tax_type }}</td>
 						<td v-if="tab === 'Issued'" class="px-3 py-2 text-ink-gray-7">{{ row.tax_object_code || "—" }}</td>
 						<td class="px-3 py-2 text-ink-gray-7">{{ row.withholding_date || "—" }}</td>
@@ -155,6 +157,13 @@ const __ = inject("$translate")
 
 const tab = ref("Received")
 const rows = ref([])
+
+// Hover card for whichever party this direction withholds against.
+function partyPreview(row) {
+	const isReceived = tab.value === "Received"
+	const name = isReceived ? row.customer : row.supplier
+	return name ? { doctype: isReceived ? "Customer" : "Supplier", name } : undefined
+}
 const customers = ref([])
 const suppliers = ref([])
 const defaultRates = ref({ "PPh 22": 1.5, "PPh 23": 2.0, "PPh 4(2)": 10.0 })

@@ -8,6 +8,8 @@
 			<Badge v-if="doc" :theme="doc.status === 'Applied' ? 'green' : doc.status === 'Previewed' ? 'blue' : 'gray'" variant="subtle">
 				{{ __(doc.status) }}
 			</Badge>
+			<DocActions v-if="doc" doctype="Coretax Faktur Import" :name="name"
+				apiModule="erpbio_indonesia_localization.api.tax" :shareText="shareText" />
 			<div class="flex-1" />
 			<Button v-if="doc && doc.status !== 'Applied'" :loading="busy === 'preview'" @click="preview">
 				<template #prefix><FeatherIcon name="eye" class="h-3.5 w-3.5" /></template>{{ __("Preview") }}
@@ -54,6 +56,7 @@
 import { computed, inject, ref } from "vue"
 import { RouterLink } from "vue-router"
 import { call } from "frappe-ui"
+import DocActions from "@/components/DocActions.vue"
 
 const props = defineProps({ name: { type: String, required: true } })
 const __ = inject("$translate")
@@ -65,6 +68,15 @@ const errorMessage = ref("")
 const okMessage = ref("")
 
 const matchedCount = computed(() => rows.value.filter((r) => r.ok).length)
+
+// One-line summary for the Share action.
+const shareText = computed(() => {
+	const d = doc.value
+	if (!d) return ""
+	return [`*${__("Coretax Import")} ${d.name}*`, `${__("Status")}: ${d.status}`, d.summary]
+		.filter(Boolean)
+		.join("\n")
+})
 
 async function load() {
 	const r = await call("erpbio_indonesia_localization.api.tax.get_import", { name: props.name })

@@ -7,6 +7,9 @@ import { session } from "./session"
 import { translate, loadTranslations } from "./translate"
 import dayjs from "./utils/dayjs"
 import { setNumberFormat } from "./utils/format"
+import { vDocPreview, closePreview, configureDocPreview } from "./composables/docPreview"
+// Point the hover cards at this app's own api, not erpbio_general's.
+configureDocPreview("erpbio_indonesia_localization.api.tax")
 // Side-effect import: applies the saved/system theme to <html> before anything
 // renders, so the Login page (which has no toggle) opens in the right theme too.
 import "./composables/useTheme"
@@ -23,6 +26,11 @@ app.component("Button", Button)
 app.component("FormControl", FormControl)
 app.component("FeatherIcon", FeatherIcon)
 app.component("Badge", Badge)
+
+// Frappe-style hover quick-info on any doc link: v-doc-preview="{ doctype, name }"
+app.directive("doc-preview", vDocPreview)
+// Close a stranded preview card whenever the route changes.
+router.afterEach(() => closePreview())
 
 app.provide("$session", session)
 app.provide("$translate", translate)

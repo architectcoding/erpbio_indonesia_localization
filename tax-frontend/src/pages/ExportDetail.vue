@@ -6,6 +6,8 @@
 			</RouterLink>
 			<h1 class="text-lg font-semibold text-ink-gray-9">{{ name }}</h1>
 			<Badge v-if="doc" :theme="doc.status === 'Generated' ? 'green' : 'gray'" variant="subtle">{{ __(doc.status) }}</Badge>
+			<DocActions v-if="doc" doctype="Coretax Faktur Export" :name="name"
+				apiModule="erpbio_indonesia_localization.api.tax" :shareText="shareText" />
 			<div class="flex-1" />
 			<Button :loading="busy === 'fetch'" @click="fetchInvoices">
 				<template #prefix><FeatherIcon name="refresh-cw" class="h-3.5 w-3.5" /></template>{{ __("Fetch Invoices") }}
@@ -52,8 +54,10 @@
 				</thead>
 				<tbody>
 					<tr v-for="row in invoices" :key="row.sales_invoice" class="border-b border-outline-gray-1 last:border-0">
-						<td class="px-3 py-2 font-medium text-ink-gray-8">{{ row.sales_invoice }}</td>
-						<td class="max-w-[16rem] truncate px-3 py-2 text-ink-gray-7">{{ row.customer }}</td>
+						<td class="px-3 py-2 font-medium text-ink-gray-8"
+							v-doc-preview="row.sales_invoice ? { doctype: 'Sales Invoice', name: row.sales_invoice } : undefined">{{ row.sales_invoice }}</td>
+						<td class="max-w-[16rem] truncate px-3 py-2 text-ink-gray-7"
+							v-doc-preview="row.customer ? { doctype: 'Customer', name: row.customer } : undefined">{{ row.customer }}</td>
 						<td class="px-3 py-2 text-ink-gray-7">{{ row.posting_date }}</td>
 						<td class="px-3 py-2 text-right tabular-nums text-ink-gray-7">{{ money(row.grand_total) }}</td>
 						<td class="px-3 py-2 text-ink-gray-7">{{ row.kode_transaksi }}</td>
@@ -78,6 +82,7 @@
 import { computed, inject, ref } from "vue"
 import { RouterLink } from "vue-router"
 import { call } from "frappe-ui"
+import DocActions from "@/components/DocActions.vue"
 
 const props = defineProps({ name: { type: String, required: true } })
 const __ = inject("$translate")
@@ -89,6 +94,18 @@ const errorMessage = ref("")
 const okMessage = ref("")
 
 const validCount = computed(() => invoices.value.filter((r) => r.ok).length)
+
+// One-line summary for the Share action.
+const shareText = computed(() => {
+	const d = doc.value
+	if (!d) return ""
+	return [
+		`*${__("Coretax Export")} ${d.name}*`,
+		d.company,
+		`${d.from_date} \u2192 ${d.to_date}`,
+		`${__("Status")}: ${d.status}`,
+	].filter(Boolean).join("\n")
+})
 
 function money(v) {
 	return new Intl.NumberFormat("id-ID").format(v || 0)
