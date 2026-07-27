@@ -100,23 +100,32 @@ def _withholding_map(direction):
 
 
 # --- WAPU/Bendahara: clear Piutang PPN Bendahara on the receipt --------------
-# When a receipt references a pemungut Sales Invoice, the government-collected
-# PPN arrives as part of the cash (net + PPN) but belongs to the PPN receivable,
-# not the customer's trade AR. We add a NEGATIVE deduction to the invoice's
-# "PPN Dipungut Pemungut" account so that: allocated(net) = paid(net+PPN) +
-# deduction(-PPN). The user enters the actual bank receipt; this routes the PPN
-# excess to Piutang PPN Bendahara. Idempotent. PPh 22 is NOT touched here (it is
-# booked at invoice time as a prepaid asset). Full-allocation assumption; partial
-# payments would need proration (left as a follow-up).
+# The bendahara's cash covers the trade receivable AND the PPN receivable: the
+# invoice's outstanding is already net of both government portions, so the money
+# that arrives is `outstanding + PPN`. We add a NEGATIVE deduction to the
+# invoice's "PPN Dipungut Pemungut" account to route that excess to Piutang PPN
+# Bendahara, and set the amount to match — ERPNext prefills the allocation,
+# which is short by exactly the PPN every time. PPh 22 is NOT touched here; it
+# is booked at invoice time as a prepaid asset the company later claims.
+#
+# Both only apply when a reference settles its invoice in FULL. A part payment
+# would otherwise clear the whole PPN receivable against a fraction of the cash,
+# so it is left alone and behaves like an ordinary part payment.
 
 def before_validate(doc, method=None):
 	if doc.payment_type != "Receive" or doc.party_type != "Customer":
 		return
 	to_clear = {}
 	for ref in doc.get("references") or []:
-		if ref.reference_doctype == "Sales Invoice" and ref.reference_name:
-			for acc, amt in _pemungut_ppn(ref.reference_name).items():
-				to_clear[acc] = to_clear.get(acc, 0.0) + amt
+		if ref.reference_doctype != "Sales Invoice" or not ref.reference_name:
+			continue
+		outstanding = flt(
+			frappe.db.get_value("Sales Invoice", ref.reference_name, "outstanding_amount")
+		)
+		if flt(ref.allocated_amount) + 0.005 < outstanding:
+			continue  # a part payment — the accountant splits the PPN by hand
+		for acc, amt in _pemungut_ppn(ref.reference_name).items():
+			to_clear[acc] = to_clear.get(acc, 0.0) + amt
 	for acc, amt in to_clear.items():
 		have = sum(-flt(d.amount) for d in (doc.get("deductions") or [])
 				   if d.account == acc and flt(d.amount) < 0)
@@ -128,6 +137,26 @@ def before_validate(doc, method=None):
 			"cost_center": frappe.get_cached_value("Company", doc.company, "cost_center"),
 			"amount": -delta,
 		})
+	_prefill_amount(doc, sum(to_clear.values()))
+
+
+def _prefill_amount(doc, ppn):
+	"""Raise the untouched default to the cash the bendahara actually sends.
+
+	ERPNext prefills the amount from the allocation, which on a WAPU invoice is
+	short by exactly the PPN — leaving the accountant to type the real figure and
+	the entry unbalanced until they do. Corrected only while the figure is still
+	that default, so a real receipt that differs (a transfer fee, a rounding) is
+	never overwritten."""
+	if not ppn or doc.docstatus != 0:
+		return
+	allocated = sum(flt(r.allocated_amount) for r in doc.get("references") or [])
+	if abs(flt(doc.paid_amount) - allocated) >= 0.005:
+		return
+	same_currency = abs(flt(doc.received_amount) - flt(doc.paid_amount)) < 0.005
+	doc.paid_amount = flt(allocated + ppn, doc.precision("paid_amount"))
+	if same_currency:
+		doc.received_amount = flt(doc.paid_amount, doc.precision("received_amount"))
 
 
 def _pemungut_ppn(si_name):
