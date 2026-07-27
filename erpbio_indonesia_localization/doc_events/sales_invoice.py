@@ -146,6 +146,32 @@ def _strip_output_vat(doc):
 	)
 
 
+def restore_output_vat(doc):
+	"""Put the output-VAT rows back when an invoice stops being a government sale.
+
+	The strip is not symmetric on its own: a doctor from a government hospital
+	buying in a personal capacity sits under a Government-group customer, so the
+	invoice is flagged and its PPN removed — but that purchase is an ordinary
+	sale and must carry PPN. Turning the government treatment off has to restore
+	what the strip took, or the invoice quietly goes out with no tax at all.
+
+	Only ever called on the deliberate WAPU-off transition, never from validate:
+	an ordinary invoice whose PPN row was removed on purpose must stay that way."""
+	if doc.docstatus != 0 or not doc.get("taxes_and_charges"):
+		return []
+	from erpnext.controllers.accounts_controller import get_taxes_and_charges
+
+	accounts = _output_vat_accounts(doc.company)
+	present = {t.account_head for t in (doc.get("taxes") or [])}
+	restored = []
+	for row in get_taxes_and_charges("Sales Taxes and Charges Template", doc.taxes_and_charges):
+		head = row.get("account_head")
+		if head in accounts and head not in present:
+			doc.append("taxes", row)
+			restored.append(head)
+	return restored
+
+
 def _dpp_base(doc):
 	"""The value actually billed, excluding output VAT — the base for PPN/PPh 22.
 

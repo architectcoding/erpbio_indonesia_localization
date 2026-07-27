@@ -507,3 +507,9 @@ msgstr "Template ini mengenakan PPN Keluaran {0}% untuk pembeli biasa, tetapi me
 
 msgid "Government PPN rate differs"
 msgstr "Tarif PPN pemerintah berbeda"
+
+msgid "Restored {0} to Taxes and Charges: this is no longer a government sale, so the PPN applies normally."
+msgstr "Mengembalikan {0} ke Pajak dan Biaya: penjualan ini bukan lagi penjualan pemerintah, sehingga PPN berlaku seperti biasa."
+
+msgid "Ordinary sale"
+msgstr "Penjualan biasa"

@@ -558,11 +558,26 @@ def update_invoice_govt_charges(sales_invoice, charges):
 	# Adding charges to an invoice raised by hand is how an accountant flags a
 	# bendahara sale the customer record didn't know about; clearing them all
 	# turns the invoice back into an ordinary one.
+	was_pemungut = cint(doc.get("eil_is_pemungut"))
 	doc.eil_is_pemungut = 1 if rows else 0
 	from erpbio_indonesia_localization.doc_events.sales_invoice import (
 		_dpp_base,
 		apply_treatment_rules,
+		restore_output_vat,
 	)
+
+	if was_pemungut and not rows:
+		# Back to an ordinary sale: give it back the output VAT the government
+		# strip removed, or it goes out carrying no tax at all.
+		restored = restore_output_vat(doc)
+		if restored:
+			frappe.msgprint(
+				_("Restored {0} to Taxes and Charges: this is no longer a government sale, so the PPN applies normally.").format(
+					", ".join(sorted(restored))
+				),
+				title=_("Ordinary sale"),
+				indicator="blue",
+			)
 
 	# Saving a SUBMITTED invoice does not re-run the validate hook, so this path
 	# has to apply the invoice's own rules itself rather than rely on them.
