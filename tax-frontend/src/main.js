@@ -5,6 +5,11 @@ import App from "./App.vue"
 import router from "./router"
 import { session } from "./session"
 import { translate, loadTranslations } from "./translate"
+import dayjs from "./utils/dayjs"
+import { setNumberFormat } from "./utils/format"
+// Side-effect import: applies the saved/system theme to <html> before anything
+// renders, so the Login page (which has no toggle) opens in the right theme too.
+import "./composables/useTheme"
 
 import "./main.css"
 
@@ -21,6 +26,7 @@ app.component("Badge", Badge)
 
 app.provide("$session", session)
 app.provide("$translate", translate)
+app.provide("$dayjs", dayjs)
 
 router.isReady().then(async () => {
 	if (import.meta.env.DEV) {
@@ -32,6 +38,22 @@ router.isReady().then(async () => {
 		})
 	}
 	loadTranslations()
+
+	// Amounts should read the way Desk renders them (1.234.567,89 on an
+	// Indonesian site), so pick the site's format up before the first render.
+	// Rides the shell's existing context call rather than adding a round-trip.
+	if (session.isLoggedIn) {
+		await frappeRequest({ url: "/api/method/erpbio_indonesia_localization.api.tax.get_context" })
+			.then((ctx) =>
+				setNumberFormat({
+					number_format: ctx?.number_format,
+					currency: ctx?.currency,
+					precision: ctx?.float_precision,
+				})
+			)
+			.catch(() => {})
+	}
+
 	document.title = window.frappe?.boot?.app_title || "ERPbio Tax"
 	app.mount("#app")
 })

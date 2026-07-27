@@ -19,12 +19,21 @@ def _check(doctype, ptype="read"):
 def get_context():
 	"""Everything the shell needs on load."""
 	_check("Coretax Faktur Export")
+	company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value(
+		"Global Defaults", "default_company"
+	)
 	return {
 		"companies": frappe.get_all("Company", pluck="name", order_by="name"),
 		"transaction_codes": frappe.get_all(
 			"Coretax Transaction Code", fields=["name", "description"], order_by="name"
 		),
 		"can_write": frappe.has_permission("Coretax Faktur Export", "write"),
+		# So amounts render the way Desk renders them (Indonesian 1.234.567,89
+		# rather than the JS default). Read from core settings — nothing here
+		# depends on erpbio_general.
+		"number_format": frappe.db.get_single_value("System Settings", "number_format") or "#.###,##",
+		"float_precision": frappe.db.get_single_value("System Settings", "float_precision") or 2,
+		"currency": (frappe.get_cached_value("Company", company, "default_currency") if company else "IDR"),
 	}
 
 
