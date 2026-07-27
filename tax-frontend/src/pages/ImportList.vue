@@ -1,71 +1,70 @@
 <template>
-	<div class="mx-auto max-w-4xl p-4">
-		<div class="mb-4 flex items-center gap-2">
-			<h1 class="text-lg font-semibold text-ink-gray-9">{{ __("Coretax Imports") }}</h1>
-			<div class="flex-1" />
+	<ListView
+		:title="__('Coretax Imports')"
+		method="erpbio_indonesia_localization.api.tax.list_imports"
+		:columns="COLUMNS"
+		:quickFilters="QUICK_FILTERS"
+		:filterableFields="FILTER_FIELDS"
+		:rowTo="(row) => ({ name: 'ImportDetail', params: { name: row.name } })"
+	>
+		<template #actions>
 			<Button variant="solid" :loading="busy" @click="pickFile">
 				<template #prefix><FeatherIcon name="upload" class="h-4 w-4" /></template>{{ __("Import Coretax File") }}
 			</Button>
 			<input ref="fileInput" type="file" accept=".xlsx,.csv" class="hidden" @change="onFile" />
-		</div>
-		<p class="mb-4 text-sm text-ink-gray-5">
-			{{ __("Upload the faktur list downloaded from Coretax to stamp official faktur numbers onto your Sales Invoices.") }}
-		</p>
+		</template>
+		<template #mobileCard="{ row, highlight }">
+			<div class="rounded-xl border bg-surface-white p-4">
+				<div class="flex items-start justify-between gap-2">
+					<span class="min-w-0 truncate text-base font-semibold text-ink-gray-9" v-html="highlight(row.name)" />
+					<Badge class="shrink-0" :theme="themeFor(row.status)" variant="subtle">{{ __(row.status) }}</Badge>
+				</div>
+				<div class="mt-2 text-xs text-ink-gray-6">{{ row.summary || "—" }}</div>
+			</div>
+		</template>
+	</ListView>
 
-		<div class="overflow-x-auto rounded-lg border bg-surface-white">
-			<table class="w-full text-sm">
-				<thead>
-					<tr class="border-b text-left text-xs text-ink-gray-5">
-						<th class="px-3 py-2">{{ __("Name") }}</th>
-						<th class="px-3 py-2">{{ __("Status") }}</th>
-						<th class="px-3 py-2">{{ __("Summary") }}</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr v-for="row in rows" :key="row.name"
-						class="cursor-pointer border-b border-outline-gray-1 last:border-0 hover:bg-surface-gray-1"
-						@click="$router.push({ name: 'ImportDetail', params: { name: row.name } })">
-						<td class="px-3 py-2 font-medium text-ink-gray-8">{{ row.name }}</td>
-						<td class="px-3 py-2">
-							<Badge :theme="row.status === 'Applied' ? 'green' : row.status === 'Previewed' ? 'blue' : 'gray'" variant="subtle">
-								{{ __(row.status) }}
-							</Badge>
-						</td>
-						<td class="px-3 py-2 text-ink-gray-7">{{ row.summary || "—" }}</td>
-					</tr>
-					<tr v-if="!rows.length && !loading">
-						<td colspan="3" class="px-3 py-8 text-center text-ink-gray-4">{{ __("No imports yet.") }}</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
-		<p v-if="errorMessage" class="mt-3 text-sm text-ink-red-3">{{ errorMessage }}</p>
-	</div>
+	<p v-if="errorMessage" class="px-3 py-2 text-sm text-ink-red-3">{{ errorMessage }}</p>
 </template>
 
 <script setup>
-import { inject, ref } from "vue"
+import { h, inject, ref } from "vue"
 import { useRouter } from "vue-router"
-import { call } from "frappe-ui"
+import { Badge, Button, FeatherIcon, call } from "frappe-ui"
+import ListView from "@/components/ListView.vue"
 
 const __ = inject("$translate")
 const router = useRouter()
 
-const rows = ref([])
-const loading = ref(true)
+const STATUSES = ["Draft", "Previewed", "Applied"]
+
+function themeFor(status) {
+	return status === "Applied" ? "green" : status === "Previewed" ? "blue" : "gray"
+}
+
+const StatusCell = {
+	props: ["value"],
+	render() {
+		return h(Badge, { theme: themeFor(this.value), variant: "subtle" }, () => this.value || "—")
+	},
+}
+
+const COLUMNS = [
+	{ label: __("Name"), key: "name", cellClass: "font-medium text-ink-gray-9", width: "16rem" },
+	{ label: __("Status"), key: "status", component: StatusCell, headerClass: "text-center", cellClass: "text-center" },
+	{ label: __("Summary"), key: "summary", sortable: false, format: (v) => v || "—", cellClass: "text-ink-gray-7" },
+]
+
+const QUICK_FILTERS = [{ fieldname: "status", label: __("Status"), fieldtype: "Select", options: STATUSES }]
+const FILTER_FIELDS = [
+	{ fieldname: "name", label: __("Name"), fieldtype: "Data" },
+	{ fieldname: "status", label: __("Status"), fieldtype: "Select", options: STATUSES },
+]
+
+// --- upload a Coretax download ---
 const busy = ref(false)
 const errorMessage = ref("")
 const fileInput = ref(null)
-
-async function load() {
-	loading.value = true
-	try {
-		rows.value = (await call("erpbio_indonesia_localization.api.tax.list_imports")) || []
-	} finally {
-		loading.value = false
-	}
-}
-load()
 
 function pickFile() {
 	fileInput.value?.click()

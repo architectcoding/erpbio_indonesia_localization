@@ -6,6 +6,12 @@
 import re
 
 import frappe
+
+from erpbio_indonesia_localization.api.list_utils import (
+	capped_total,
+	resolve_order_by,
+	to_getlist_filters,
+)
 from frappe import _
 from frappe.utils import cint, flt
 
@@ -13,6 +19,12 @@ from frappe.utils import cint, flt
 def _check(doctype, ptype="read"):
 	if not frappe.has_permission(doctype, ptype):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+
+EXPORT_FILTER_FIELDS = {"name", "company", "status"}
+EXPORT_ORDER_FIELDS = {"name", "company", "from_date", "to_date", "status", "generated_on", "creation"}
+IMPORT_FILTER_FIELDS = {"name", "status"}
+IMPORT_ORDER_FIELDS = {"name", "status", "creation"}
 
 
 @frappe.whitelist()
@@ -39,15 +51,23 @@ def get_context():
 
 # ------------------------------------------------------------------- exports
 @frappe.whitelist()
-def list_exports(start=0, page_length=20):
+def list_exports(txt=None, filters=None, order_by=None, start=0, page_length=20):
+	"""Exports for the shared ListView: panel/quick filters, sortable headers and
+	a capped total so the footer can show "N of M"."""
 	_check("Coretax Faktur Export")
-	return frappe.get_all(
+	flt_list = to_getlist_filters(filters, EXPORT_FILTER_FIELDS)
+	or_filters = {"name": ["like", f"%{txt}%"]} if txt else None
+	rows = frappe.get_all(
 		"Coretax Faktur Export",
+		filters=flt_list,
+		or_filters=or_filters,
 		fields=["name", "company", "from_date", "to_date", "status", "export_file", "generated_on"],
-		order_by="creation desc",
+		order_by=resolve_order_by(order_by, EXPORT_ORDER_FIELDS, "creation desc"),
 		start=int(start),
 		page_length=int(page_length),
 	)
+	total = capped_total("Coretax Faktur Export", filters=flt_list, or_filters=or_filters)
+	return {"items": rows, "total": total, "has_next": int(start) + len(rows) < total, "meta": {}}
 
 
 @frappe.whitelist()
@@ -322,15 +342,22 @@ def export_ebupot(from_date, to_date, company=None):
 
 # ------------------------------------------------------------------- imports
 @frappe.whitelist()
-def list_imports(start=0, page_length=20):
+def list_imports(txt=None, filters=None, order_by=None, start=0, page_length=20):
+	"""Imports for the shared ListView — same contract as list_exports."""
 	_check("Coretax Faktur Import")
-	return frappe.get_all(
+	flt_list = to_getlist_filters(filters, IMPORT_FILTER_FIELDS)
+	or_filters = {"name": ["like", f"%{txt}%"]} if txt else None
+	rows = frappe.get_all(
 		"Coretax Faktur Import",
+		filters=flt_list,
+		or_filters=or_filters,
 		fields=["name", "import_file", "status", "summary", "creation"],
-		order_by="creation desc",
+		order_by=resolve_order_by(order_by, IMPORT_ORDER_FIELDS, "creation desc"),
 		start=int(start),
 		page_length=int(page_length),
 	)
+	total = capped_total("Coretax Faktur Import", filters=flt_list, or_filters=or_filters)
+	return {"items": rows, "total": total, "has_next": int(start) + len(rows) < total, "meta": {}}
 
 
 @frappe.whitelist()
