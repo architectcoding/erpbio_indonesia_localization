@@ -639,3 +639,135 @@ msgstr "Didukung oleh ERPbio · Frappe / ERPNext"
 
 msgid "{0} is not an enabled language."
 msgstr "{0} bukan bahasa yang diaktifkan."
+
+msgid "Customers"
+msgstr "Pelanggan"
+
+msgid "Customer"
+msgstr "Pelanggan"
+
+msgid "Customer Group"
+msgstr "Grup Pelanggan"
+
+msgid "Tax Status"
+msgstr "Status Pajak"
+
+msgid "ID Type"
+msgstr "Jenis Identitas"
+
+msgid "NPWP / NIK"
+msgstr "NPWP / NIK"
+
+msgid "NITKU"
+msgstr "NITKU"
+
+msgid "Government"
+msgstr "Pemerintah"
+
+msgid "Government (Pemungut)"
+msgstr "Pemerintah (Pemungut)"
+
+msgid "Government (flagged)"
+msgstr "Pemerintah (ditandai)"
+
+msgid "Missing NPWP/NIK"
+msgstr "NPWP/NIK belum ada"
+
+msgid "No NPWP/NIK"
+msgstr "Tanpa NPWP/NIK"
+
+msgid "Incomplete"
+msgstr "Belum lengkap"
+
+msgid "Blocked"
+msgstr "Terhambat"
+
+msgid "{0} without NPWP/NIK"
+msgstr "{0} tanpa NPWP/NIK"
+
+msgid "{0} incomplete"
+msgstr "{0} belum lengkap"
+
+msgid "{0} of {1} ready"
+msgstr "{0} dari {1} siap"
+
+msgid "Buyer Identity (Coretax)"
+msgstr "Identitas Pembeli (Coretax)"
+
+msgid "Buyer ID Type"
+msgstr "Jenis Identitas Pembeli"
+
+msgid "Buyer Document Number"
+msgstr "Nomor Dokumen Pembeli"
+
+msgid "NITKU / ID TKU"
+msgstr "NITKU / ID TKU"
+
+msgid "Tax Email"
+msgstr "Email Pajak"
+
+msgid "Buyer Country Code"
+msgstr "Kode Negara Pembeli"
+
+msgid "TIN = NPWP. The number itself goes in NPWP / NIK."
+msgstr "TIN = NPWP. Nomornya diisi di NPWP / NIK."
+
+msgid "Punctuation is fine — the faktur uses digits only."
+msgstr "Tanda baca boleh — faktur hanya memakai angka."
+
+msgid "Blank = NPWP + 000000 (pusat)."
+msgstr "Kosong = NPWP + 000000 (pusat)."
+
+msgid "Government (Pemungut / WAPU)"
+msgstr "Pemerintah (Pemungut / WAPU)"
+
+msgid "This buyer deposits the PPN itself and withholds PPh 22"
+msgstr "Pembeli ini menyetor PPN sendiri dan memotong PPh 22"
+
+msgid "Sets the flag on new orders and invoices for this customer."
+msgstr "Menandai pesanan dan faktur baru untuk pelanggan ini."
+
+msgid "Already treated as government because its customer group ({0}) is listed in Indonesia Tax Settings — the checkbox above is not needed."
+msgstr "Sudah diperlakukan sebagai pemerintah karena grup pelanggannya ({0}) terdaftar di Indonesia Tax Settings — centang di atas tidak diperlukan."
+
+msgid "What the faktur will send"
+msgstr "Yang akan dikirim ke faktur"
+
+msgid "The buyer values this customer's e-Faktur rows will carry, after the blank-means-derived defaults are applied."
+msgstr "Nilai pembeli yang akan dibawa baris e-Faktur pelanggan ini, setelah nilai bawaan untuk kolom kosong diterapkan."
+
+msgid "NPWP (digits)"
+msgstr "NPWP (angka)"
+
+msgid "Document Number"
+msgstr "Nomor Dokumen"
+
+msgid "ID TKU"
+msgstr "ID TKU"
+
+msgid "Country"
+msgstr "Negara"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Open in Desk"
+msgstr "Buka di Desk"
+
+msgid "Could not load this customer."
+msgstr "Tidak dapat memuat pelanggan ini."
+
+msgid "Customer {0} not found."
+msgstr "Pelanggan {0} tidak ditemukan."
+
+msgid "Customer is required."
+msgstr "Pelanggan wajib diisi."
+
+msgid "No NPWP/NIK — the faktur cannot be exported"
+msgstr "Tanpa NPWP/NIK — faktur tidak dapat diekspor"
+
+msgid "No document number — the faktur would send \"-\""
+msgstr "Tanpa nomor dokumen — faktur akan mengirim \"-\""
+
+msgid "You can view this buyer's tax identity but not change it — that needs write access to Customer."
+msgstr "Anda dapat melihat identitas pajak pembeli ini tetapi tidak dapat mengubahnya — itu memerlukan hak tulis pada Pelanggan."

@@ -63,7 +63,10 @@ const NAV = [
 	},
 	{
 		label: "Setup",
-		items: [{ label: "Settings", route: "Settings", icon: "settings", match: "/settings" }],
+		items: [
+			{ label: "Customers", route: "CustomerList", icon: "users", match: "/customers" },
+			{ label: "Settings", route: "Settings", icon: "settings", match: "/settings" },
+		],
 	},
 ]
 

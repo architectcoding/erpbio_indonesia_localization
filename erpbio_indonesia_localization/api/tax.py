@@ -986,3 +986,180 @@ def set_language(lang):
 	# added there later would silently change how every amount renders.
 	frappe.db.set_value("User", frappe.session.user, "language", lang)
 	return {"lang": lang}
+
+
+# ------------------------------------------------------------------- customers
+# Buyer tax identity lives on the Customer (tax_id + the eil_ fields), and a
+# faktur is rejected without it — but until now the only place to see or fix it
+# was Desk, one customer at a time, after an export had already flagged the gap.
+CUSTOMER_TAX_FIELDS = (
+	"eil_id_type",
+	"tax_id",
+	"eil_document_number",
+	"eil_nitku",
+	"eil_tax_email",
+	"eil_country_code",
+	"eil_is_pemungut",
+)
+CUSTOMER_LIST_FIELDS = ("name", "customer_name", "customer_group", "customer_type", "disabled") + CUSTOMER_TAX_FIELDS
+CUSTOMER_FILTER_FIELDS = {"name", "customer_name", "customer_group", "eil_id_type", "eil_is_pemungut", "disabled"}
+CUSTOMER_ORDER_FIELDS = {"name", "customer_name", "customer_group", "eil_id_type", "tax_id", "creation", "modified"}
+
+
+def _digits(value):
+	return re.sub(r"\D", "", value or "")
+
+
+def _pemungut_groups():
+	"""Customer groups configured as pemungut in Indonesia Tax Settings."""
+	return set(
+		frappe.get_all(
+			"EIL Pemungut Customer Group",
+			filters={"parenttype": "Indonesia Tax Settings"},
+			pluck="customer_group",
+		)
+	)
+
+
+def _tax_status(row, pemungut_groups):
+	"""What the faktur would say about this buyer today.
+
+	"Blocked" mirrors CoretaxFakturExport._validate_invoice exactly — a TIN/NIK
+	buyer with no Tax ID is the one buyer-side problem that fails an export.
+	"Incomplete" is advisory: the export substitutes a placeholder rather than
+	failing, but Coretax may still reject it.
+	"""
+	id_type = row.get("eil_id_type") or "TIN"
+	if id_type in ("TIN", "NIK") and not _digits(row.get("tax_id")):
+		return "Blocked", _("No NPWP/NIK — the faktur cannot be exported")
+	if id_type in ("Passport", "Other") and not (row.get("eil_document_number") or "").strip():
+		return "Incomplete", _("No document number — the faktur would send \"-\"")
+	return "Ready", _("Ready")
+
+
+def _effective_pemungut(row, pemungut_groups):
+	"""(is_pemungut, source) — the flag on the customer wins, otherwise the
+	customer group decides. Surfaced separately because a customer treated as
+	government purely through its group looks unflagged, which reads as a bug."""
+	if row.get("eil_is_pemungut"):
+		return True, "flag"
+	if row.get("customer_group") and row["customer_group"] in pemungut_groups:
+		return True, "group"
+	return False, ""
+
+
+def _customer_filters(filters):
+	"""Real DB filters, plus the one derived filter worth offering: "missing Tax
+	ID" is the actionable half of the readiness status and — unlike the status
+	itself — is expressible as a filter, so it paginates and counts correctly."""
+	filters = frappe.parse_json(filters) if isinstance(filters, str) else (filters or [])
+	missing = None
+	kept = []
+	for f in filters:
+		if isinstance(f, dict) and f.get("field") == "missing_tax_id":
+			missing = str(f.get("value") or "").lower() in ("1", "yes", "true")
+			continue
+		kept.append(f)
+	flt_list = to_getlist_filters(kept, CUSTOMER_FILTER_FIELDS)
+	if missing is not None:
+		if not isinstance(flt_list, dict):
+			flt_list = dict(flt_list or {})
+		flt_list["tax_id"] = ["is", "not set" if missing else "set"]
+	return flt_list
+
+
+@frappe.whitelist()
+def list_customers(txt=None, filters=None, order_by=None, start=0, page_length=20):
+	"""Customers with their Coretax buyer identity, for the shared ListView."""
+	_check("Customer")
+	flt_list = _customer_filters(filters)
+	or_filters = (
+		{"name": ["like", f"%{txt}%"], "customer_name": ["like", f"%{txt}%"], "tax_id": ["like", f"%{txt}%"]}
+		if txt
+		else None
+	)
+	rows = frappe.get_all(
+		"Customer",
+		filters=flt_list,
+		or_filters=or_filters,
+		fields=list(CUSTOMER_LIST_FIELDS),
+		order_by=resolve_order_by(order_by, CUSTOMER_ORDER_FIELDS, "customer_name asc"),
+		start=int(start),
+		page_length=int(page_length),
+	)
+	groups = _pemungut_groups()
+	for r in rows:
+		r["tax_status"], r["tax_message"] = _tax_status(r, groups)
+		r["is_pemungut"], r["pemungut_source"] = _effective_pemungut(r, groups)
+	total = capped_total("Customer", filters=flt_list, or_filters=or_filters)
+	return {
+		"items": rows,
+		"total": total,
+		"has_next": int(start) + len(rows) < total,
+		"meta": {"can_write": frappe.has_permission("Customer", "write")},
+	}
+
+
+@frappe.whitelist()
+def customer_tax_summary(filters=None):
+	"""How many buyers are export-ready — the counts the list header shows.
+	Deliberately unpaginated: the point is the size of the backlog."""
+	_check("Customer")
+	flt_list = _customer_filters(filters)
+	rows = frappe.get_all("Customer", filters=flt_list, fields=list(CUSTOMER_LIST_FIELDS))
+	groups = _pemungut_groups()
+	out = {"total": len(rows), "Ready": 0, "Incomplete": 0, "Blocked": 0, "pemungut": 0}
+	for r in rows:
+		status, _msg = _tax_status(r, groups)
+		out[status] += 1
+		if _effective_pemungut(r, groups)[0]:
+			out["pemungut"] += 1
+	return out
+
+
+@frappe.whitelist()
+def get_customer_tax(name):
+	_check("Customer")
+	row = frappe.db.get_value("Customer", name, list(CUSTOMER_LIST_FIELDS), as_dict=True)
+	if not row:
+		frappe.throw(_("Customer {0} not found.").format(name))
+	groups = _pemungut_groups()
+	status, message = _tax_status(row, groups)
+	is_pemungut, source = _effective_pemungut(row, groups)
+	npwp = _digits(row.get("tax_id"))
+	default_country = frappe.db.get_single_value("Indonesia Tax Settings", "default_buyer_country") or "IDN"
+	return {
+		"doc": row,
+		"tax_status": status,
+		"tax_message": message,
+		"is_pemungut": is_pemungut,
+		"pemungut_source": source,
+		# Exactly what CoretaxFakturExport._buyer_bits would put on the faktur —
+		# shown so the blank-means-derived fields aren't a mystery.
+		"faktur_preview": {
+			"npwp": npwp,
+			"id_type": row.get("eil_id_type") or "TIN",
+			"document_number": row.get("eil_document_number") or "-",
+			"country": row.get("eil_country_code") or default_country,
+			"email": row.get("eil_tax_email") or "",
+			"idtku": _digits(row.get("eil_nitku")) or (npwp + "000000" if npwp else ""),
+		},
+		"can_write": frappe.has_permission("Customer", "write"),
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+def save_customer_tax(payload):
+	"""Write only the buyer tax identity. Nothing else on the Customer is
+	touched, so an accountant maintaining NPWPs can't disturb sales data."""
+	payload = frappe.parse_json(payload)
+	name = payload.get("name")
+	if not name:
+		frappe.throw(_("Customer is required."))
+	_check("Customer", "write")
+	doc = frappe.get_doc("Customer", name)
+	for field in CUSTOMER_TAX_FIELDS:
+		if field in payload:
+			doc.set(field, payload[field])
+	doc.save()
+	return get_customer_tax(name)

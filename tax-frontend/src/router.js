@@ -18,6 +18,13 @@ const routes = [
 		component: () => import("@/pages/BuktiPotongDetail.vue"),
 		props: true,
 	},
+	{ path: "/customers", name: "CustomerList", component: () => import("@/pages/CustomerList.vue") },
+	{
+		path: "/customers/:name",
+		name: "CustomerTaxDetail",
+		component: () => import("@/pages/CustomerTaxDetail.vue"),
+		props: true,
+	},
 	{ path: "/settings", name: "Settings", component: () => import("@/pages/Settings.vue") },
 ]
 
