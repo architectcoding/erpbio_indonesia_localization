@@ -1,0 +1,116 @@
+{
+ "actions": [],
+ "creation": "2026-07-28 12:00:00.000000",
+ "description": "How this app computes PPh 21, and the gate that says its rate tables have been checked.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "pph21_component",
+  "verification_section",
+  "tables_verified",
+  "tables_source",
+  "deductions_section",
+  "biaya_jabatan_percent",
+  "biaya_jabatan_monthly_cap"
+ ],
+ "fields": [
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enable PPh 21 on Salary Slips",
+   "description": "Off by default. Nothing is computed until this is on."
+  },
+  {
+   "fieldname": "pph21_component",
+   "fieldtype": "Link",
+   "label": "PPh 21 Salary Component",
+   "options": "Salary Component",
+   "description": "The deduction row this app writes. Must NOT be flagged 'Variable Based On Taxable Salary' \u2014 that hands the calculation to HRMS's annualised slab engine, which cannot express TER."
+  },
+  {
+   "fieldname": "verification_section",
+   "fieldtype": "Section Break",
+   "label": "Rate Table Verification"
+  },
+  {
+   "fieldname": "tables_verified",
+   "fieldtype": "Check",
+   "label": "Rate tables verified against the regulation",
+   "description": "PPh 21 refuses to compute until this is ticked. A blocked payroll run is a far better failure than a silently wrong withholding."
+  },
+  {
+   "fieldname": "tables_source",
+   "fieldtype": "Small Text",
+   "label": "Source / Provenance",
+   "read_only": 1,
+   "description": "Where the loaded tables came from."
+  },
+  {
+   "fieldname": "deductions_section",
+   "fieldtype": "Section Break",
+   "label": "Annual Deductions (Pengurang)"
+  },
+  {
+   "fieldname": "biaya_jabatan_percent",
+   "fieldtype": "Percent",
+   "label": "Biaya Jabatan %",
+   "default": "5",
+   "description": "PMK 168 Pasal 5(3): 5% of annual gross."
+  },
+  {
+   "fieldname": "biaya_jabatan_monthly_cap",
+   "fieldtype": "Currency",
+   "label": "Biaya Jabatan Monthly Cap",
+   "default": "500000",
+   "description": "Rp 500,000 per month, i.e. Rp 6,000,000 for a full year."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-07-28 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPbio Indonesia Localization",
+ "name": "EIL PPh 21 Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "issingle": 1
+}

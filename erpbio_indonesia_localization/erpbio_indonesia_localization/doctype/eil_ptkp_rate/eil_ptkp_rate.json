@@ -1,0 +1,94 @@
+{
+ "actions": [],
+ "creation": "2026-07-28 12:00:00.000000",
+ "description": "Annual Penghasilan Tidak Kena Pajak per marital/dependant status, and the TER category that status maps to.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "ptkp_status",
+  "annual_amount",
+  "ter_category",
+  "effective_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "ptkp_status",
+   "fieldtype": "Select",
+   "label": "PTKP Status",
+   "reqd": 1,
+   "in_list_view": 1,
+   "unique": 0,
+   "options": "TK/0\nTK/1\nTK/2\nTK/3\nK/0\nK/1\nK/2\nK/3"
+  },
+  {
+   "fieldname": "annual_amount",
+   "fieldtype": "Currency",
+   "label": "Annual Amount",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "ter_category",
+   "fieldtype": "Select",
+   "label": "TER Category",
+   "reqd": 1,
+   "in_list_view": 1,
+   "options": "A\nB\nC",
+   "description": "Which TER Bulanan table this status uses. Stated by PMK 168 itself."
+  },
+  {
+   "fieldname": "effective_from",
+   "fieldtype": "Date",
+   "label": "Effective From",
+   "reqd": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-07-28 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPbio Indonesia Localization",
+ "name": "EIL PTKP Rate",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "hash"
+}

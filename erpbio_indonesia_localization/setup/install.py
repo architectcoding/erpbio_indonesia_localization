@@ -352,6 +352,21 @@ def setup_eil():
 	create_custom_fields(CUSTOM_FIELDS, ignore_validate=True)
 	seed_transaction_codes()
 	seed_settings_defaults()
+	seed_pph21_rates()
+
+
+def seed_pph21_rates():
+	"""Load the statutory PPh 21 rate tables shipped with the app.
+
+	Runs on every migrate rather than as a one-shot patch: it is additive and
+	idempotent, so it self-heals if the tables are missing, and it cannot end up
+	recorded as "already executed" while having done nothing.
+	"""
+	if not frappe.db.exists("DocType", "EIL TER Bracket"):
+		return  # first install: model sync has not created the doctypes yet
+	from erpbio_indonesia_localization.pph21.rates_loader import load_rates
+
+	load_rates()
 
 
 def seed_transaction_codes():
