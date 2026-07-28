@@ -1,0 +1,71 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.py~
+
+# Distribution / packaging
+.Python
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+tags
+# Anchored to root -- setuptools generates this file at the repo root, and
+# unanchored it would case-insensitively shadow any manifest/ directory
+# (core.ignorecase=true on macOS).
+/MANIFEST
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Dependency directories
+# No trailing slash -- a trailing "/" only matches real directories, not
+# symlinks, so a symlinked node_modules would otherwise slip through
+# untracked.
+node_modules
+jspm_packages
+
+# IDEs and editors
+.vscode/
+.vs/
+.idea/
+.kdev4/
+*.kdev4
+*.DS_Store
+.DS_Store
+*.swp
+*.comp.js
+.wnf-lang-status
+*debug.log
+
+# Helix Editor
+.helix/
+
+# Aider AI Chat
+.aider*
+
+# NOTE: unlike erpbio_general, the compiled tax SPA under
+# erpbio_indonesia_localization/public/tax/ is deliberately TRACKED and must
+# stay that way. erpbio_indonesia_localization/www/erpbio_tax.html references
+# the hashed build filenames directly (e.g. assets/index-<hash>.js), so the
+# built output has to ship with the repo -- deploys do not run a frontend
+# build step for this app. Source lives in tax-frontend/ and is rebuilt with
+# `yarn build` there (vite outDir points at public/tax). Do not add an ignore
+# rule for public/tax/.
