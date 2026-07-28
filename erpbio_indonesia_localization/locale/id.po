@@ -582,3 +582,24 @@ msgstr "Simpan"
 
 msgid "Loading…"
 msgstr "Memuat…"
+
+msgid "Notifications"
+msgstr "Notifikasi"
+
+msgid "{0} new"
+msgstr "{0} baru"
+
+msgid "Mark all read"
+msgstr "Tandai semua terbaca"
+
+msgid "No notifications."
+msgstr "Tidak ada notifikasi."
+
+msgid "just now"
+msgstr "baru saja"
+
+msgid "{0}m ago"
+msgstr "{0} menit lalu"
+
+msgid "{0}h ago"
+msgstr "{0} jam lalu"

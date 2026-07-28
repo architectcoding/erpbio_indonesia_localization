@@ -5,6 +5,7 @@
 			<div class="flex items-center gap-2 border-b px-4 py-3">
 				<div class="flex h-7 w-7 items-center justify-center rounded-md bg-surface-gray-7 text-sm font-bold text-ink-white">T</div>
 				<span class="text-sm font-semibold text-ink-gray-9">{{ __("ERPbio Tax") }}</span>
+				<div class="ml-auto"><NotificationsBell /></div>
 			</div>
 			<nav class="flex-1 overflow-y-auto p-2">
 				<template v-for="group in NAV" :key="group.label">
@@ -45,6 +46,7 @@ import { inject } from "vue"
 import { RouterLink, useRoute } from "vue-router"
 import { useTheme } from "@/composables/useTheme"
 import DocPreviewHost from "@/components/DocPreviewHost.vue"
+import NotificationsBell from "@/components/NotificationsBell.vue"
 
 const session = inject("$session")
 const __ = inject("$translate")

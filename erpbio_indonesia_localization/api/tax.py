@@ -877,3 +877,34 @@ def email_document(doctype, name, recipient, subject=None, message=None, print_f
 		attachments=[frappe.attach_print(doctype, name, print_format=print_format or None)],
 	)
 	return {"sent": True, "to": recipient.strip()}
+
+
+# ------------------------------------------------------------------ notifications
+# The bell reads core's own Notification Log — deliberately NOT erpbio_general's
+# equivalent endpoint, which would make this app depend at runtime on that app
+# being installed. Scoped to the session user, so no doctype permission applies.
+@frappe.whitelist()
+def get_notifications(limit=20):
+	"""The user's recent Notification Log entries + unread count."""
+	rows = frappe.get_all(
+		"Notification Log",
+		filters={"for_user": frappe.session.user},
+		fields=["name", "subject", "type", "document_type", "document_name", "read", "creation", "from_user"],
+		order_by="creation desc",
+		limit=cint(limit) or 20,
+	)
+	unread = frappe.db.count("Notification Log", {"for_user": frappe.session.user, "read": 0})
+	return {"items": rows, "unread": unread}
+
+
+@frappe.whitelist(methods=["POST"])
+def mark_notifications_read(names=None):
+	"""Mark the given notifications (or all unread) as read."""
+	if isinstance(names, str):
+		names = frappe.parse_json(names or "null")
+	filters = {"for_user": frappe.session.user, "read": 0}
+	if names:
+		filters["name"] = ["in", names]
+	for n in frappe.get_all("Notification Log", filters=filters, pluck="name"):
+		frappe.db.set_value("Notification Log", n, "read", 1, update_modified=False)
+	return {"ok": True}
