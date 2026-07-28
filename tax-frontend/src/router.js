@@ -18,6 +18,7 @@ const routes = [
 		component: () => import("@/pages/BuktiPotongDetail.vue"),
 		props: true,
 	},
+	{ path: "/pph21/tables", name: "Pph21Tables", component: () => import("@/pages/Pph21Tables.vue") },
 	{ path: "/customers", name: "CustomerList", component: () => import("@/pages/CustomerList.vue") },
 	{
 		path: "/customers/:name",

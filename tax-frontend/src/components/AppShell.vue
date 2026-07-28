@@ -62,6 +62,10 @@ const NAV = [
 		items: [{ label: "Bukti Potong", route: "BuktiPotong", icon: "file-minus", match: "/bukti-potong" }],
 	},
 	{
+		label: "PPh 21",
+		items: [{ label: "Rate Tables", route: "Pph21Tables", icon: "percent", match: "/pph21" }],
+	},
+	{
 		label: "Setup",
 		items: [
 			{ label: "Customers", route: "CustomerList", icon: "users", match: "/customers" },

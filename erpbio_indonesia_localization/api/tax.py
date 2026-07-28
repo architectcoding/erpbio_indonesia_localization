@@ -1190,3 +1190,73 @@ def get_launcher_apps():
 	except Exception:
 		# A sibling app's misconfiguration must not take this app's shell down.
 		return []
+
+
+# ----------------------------------------------------------------------- PPh 21
+# The verification gate is only meaningful if the numbers being verified can
+# actually be read, so the SPA gets the loaded tables verbatim plus whatever the
+# structural checks say about them.
+@frappe.whitelist()
+def get_pph21_tables():
+	_check("EIL PPh 21 Settings")
+	from erpbio_indonesia_localization.pph21 import tables as pph21_tables
+
+	settings = frappe.get_single("EIL PPh 21 Settings")
+	bands = {}
+	for category in ("A", "B", "C", "Harian"):
+		bands[category] = frappe.get_all(
+			"EIL TER Bracket",
+			filters={"category": category},
+			fields=["from_amount", "to_amount", "rate", "effective_from"],
+			order_by="effective_from desc, from_amount asc",
+		)
+	return {
+		"settings": {
+			"enabled": cint(settings.enabled),
+			"tables_verified": cint(settings.tables_verified),
+			"tables_source": settings.tables_source,
+			"pph21_component": settings.pph21_component,
+			"biaya_jabatan_percent": flt(settings.biaya_jabatan_percent),
+			"biaya_jabatan_monthly_cap": flt(settings.biaya_jabatan_monthly_cap),
+		},
+		"ter": bands,
+		"ptkp": frappe.get_all(
+			"EIL PTKP Rate",
+			fields=["ptkp_status", "annual_amount", "ter_category", "effective_from"],
+			order_by="annual_amount asc",
+		),
+		"pasal_17": frappe.get_all(
+			"EIL PPh 21 Bracket",
+			fields=["from_amount", "to_amount", "rate", "effective_from"],
+			order_by="effective_from desc, from_amount asc",
+		),
+		# Reported rather than hidden: a table that fails these is wrong whatever
+		# its source, and the reader should see that before ticking anything.
+		"problems": pph21_tables.validate_tables(),
+		"can_write": frappe.has_permission("EIL PPh 21 Settings", "write"),
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+def set_pph21_tables_verified(verified):
+	"""Record that a human has checked the loaded tables against the regulation.
+
+	Deliberately a separate endpoint from the rest of the settings: this is an
+	assertion about the real world, not a preference, and refusing it while the
+	structural checks still fail would be pointless to allow.
+	"""
+	_check("EIL PPh 21 Settings", "write")
+	verified = cint(verified)
+	if verified:
+		from erpbio_indonesia_localization.pph21 import tables as pph21_tables
+
+		problems = pph21_tables.validate_tables()
+		if problems:
+			frappe.throw(
+				_("These tables do not pass their own structural checks yet:<br>{0}").format(
+					"<br>".join(problems[:8])
+				)
+			)
+	frappe.db.set_single_value("EIL PPh 21 Settings", "tables_verified", verified)
+	frappe.clear_cache(doctype="EIL PPh 21 Settings")
+	return {"tables_verified": verified}

@@ -774,3 +774,105 @@ msgstr "Anda dapat melihat identitas pajak pembeli ini tetapi tidak dapat mengub
 
 msgid "Apps"
 msgstr "Aplikasi"
+
+msgid "PPh 21"
+msgstr "PPh 21"
+
+msgid "PPh 21 Rate Tables"
+msgstr "Tabel Tarif PPh 21"
+
+msgid "Rate Tables"
+msgstr "Tabel Tarif"
+
+msgid "Verified"
+msgstr "Terverifikasi"
+
+msgid "Not verified"
+msgstr "Belum diverifikasi"
+
+msgid "Enabled on salary slips"
+msgstr "Aktif pada slip gaji"
+
+msgid "Not enabled"
+msgstr "Belum aktif"
+
+msgid "Verification"
+msgstr "Verifikasi"
+
+msgid "Open settings in Desk"
+msgstr "Buka pengaturan di Desk"
+
+msgid "No source recorded."
+msgstr "Sumber belum dicatat."
+
+msgid "These tables fail their own structural checks:"
+msgstr "Tabel ini tidak lolos pemeriksaan strukturnya sendiri:"
+
+msgid "All bands are contiguous, their rates never fall, and every PTKP status has a rate."
+msgstr "Semua lapisan bersambung, tarifnya tidak pernah menurun, dan setiap status PTKP memiliki tarif."
+
+msgid "I have checked these tables against the regulation"
+msgstr "Saya telah memeriksa tabel ini terhadap peraturan"
+
+msgid "Until this is ticked, PPh 21 refuses to compute — a blocked payroll run is a better failure than a silently wrong withholding."
+msgstr "Sebelum ini dicentang, PPh 21 menolak menghitung — penggajian yang terhenti lebih baik daripada pemotongan yang salah tanpa disadari."
+
+msgid "PTKP"
+msgstr "PTKP"
+
+msgid "annual allowance per status"
+msgstr "penghasilan tidak kena pajak per status"
+
+msgid "Pasal 17"
+msgstr "Pasal 17"
+
+msgid "annual progressive brackets"
+msgstr "lapisan tarif progresif setahun"
+
+msgid "TER"
+msgstr "TER"
+
+msgid "effective rate on one period's gross"
+msgstr "tarif efektif atas bruto satu masa"
+
+msgid "Category"
+msgstr "Kategori"
+
+msgid "Harian"
+msgstr "Harian"
+
+msgid "PTKP status TK/0, TK/1 and K/0."
+msgstr "Status PTKP TK/0, TK/1 dan K/0."
+
+msgid "PTKP status TK/2, TK/3, K/1 and K/2."
+msgstr "Status PTKP TK/2, TK/3, K/1 dan K/2."
+
+msgid "PTKP status K/3."
+msgstr "Status PTKP K/3."
+
+msgid "Daily-paid workers. Above the top band the daily rate no longer applies at all."
+msgstr "Pekerja harian. Di atas lapisan tertinggi, tarif harian tidak berlaku lagi."
+
+msgid "From"
+msgstr "Dari"
+
+msgid "To"
+msgstr "Sampai"
+
+msgid "Rate"
+msgstr "Tarif"
+
+msgid "and above"
+msgstr "dan ke atas"
+
+msgid "Could not load the rate tables."
+msgstr "Tidak dapat memuat tabel tarif."
+
+msgid "Recorded. PPh 21 will now compute on salary slips that carry the component."
+msgstr "Tercatat. PPh 21 kini dihitung pada slip gaji yang memuat komponennya."
+
+msgid "Verification withdrawn. PPh 21 will refuse to compute."
+msgstr "Verifikasi dicabut. PPh 21 akan menolak menghitung."
+
+msgid "The statutory tables PPh 21 is calculated from. They were extracted from the regulation rather than typed in, but a person still has to confirm them before anything is withheld."
+msgstr "Tabel resmi yang menjadi dasar perhitungan PPh 21. Diambil langsung dari peraturan, bukan diketik ulang, tetapi tetap harus dikonfirmasi seseorang sebelum ada pemotongan."
