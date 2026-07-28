@@ -101,6 +101,63 @@ def pasal17_tax(taxable_income, on_date=None):
 	return tax
 
 
+def pasal17_bands(taxable_income, on_date=None):
+	"""The Pasal 17 calculation band by band, as the certificate prints it
+	("5% x 60.000.000 = 3.000.000"). Same arithmetic as pasal17_tax, kept
+	together so a fix to one cannot leave the other stating something else."""
+	require_verified_tables()
+	remaining = flt(taxable_income)
+	out = []
+	for row in _rows("EIL PPh 21 Bracket", on_date):
+		floor = flt(row.from_amount) - 1 if flt(row.from_amount) else 0
+		upper = flt(row.to_amount)
+		width = (upper - floor) if upper else max(remaining, 0.0)
+		taxed = min(max(remaining, 0.0), width)
+		out.append({
+			"rate": flt(row.rate),
+			"from_amount": flt(row.from_amount),
+			"to_amount": upper,
+			"taxed": taxed,
+			"tax": taxed * flt(row.rate) / 100.0,
+		})
+		remaining -= taxed
+	return out
+
+
+def ptkp_breakdown(status, on_date=None):
+	"""PTKP split into the lines the certificate shows: the taxpayer, the marriage
+	supplement, and one line per dependant.
+
+	Derived from the loaded rates rather than the well-known Rp 4,500,000 step, so
+	it follows the table. The parts must add up to the status's own PTKP — if a
+	table edit breaks the ladder, that is a real inconsistency and it throws here
+	rather than printing a certificate whose lines do not sum to its total.
+	"""
+	total = ptkp_annual(status, on_date)
+	base = ptkp_annual("TK/0", on_date)
+	married_extra = ptkp_annual("K/0", on_date) - base
+	per_dependant = ptkp_annual("TK/1", on_date) - base
+
+	married = status.startswith("K/")
+	dependants = int(status.split("/")[1])
+	parts = {
+		"self": base,
+		"married": married_extra if married else 0.0,
+		"dependants": dependants,
+		"per_dependant": per_dependant,
+		"dependants_total": per_dependant * dependants,
+		"total": total,
+	}
+	summed = parts["self"] + parts["married"] + parts["dependants_total"]
+	if round(summed) != round(total):
+		frappe.throw(
+			_("PTKP for {0} is {1} but its parts add up to {2}. Check the PTKP rate table.").format(
+				status, total, summed
+			)
+		)
+	return parts
+
+
 # ------------------------------------------------------------------ the gate
 def require_verified_tables():
 	settings = frappe.get_cached_doc("EIL PPh 21 Settings")

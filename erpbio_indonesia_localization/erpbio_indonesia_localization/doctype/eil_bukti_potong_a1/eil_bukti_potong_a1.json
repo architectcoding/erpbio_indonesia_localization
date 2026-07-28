@@ -1,0 +1,420 @@
+{
+ "actions": [],
+ "autoname": "format:BPA1-{tax_year}-{employee}",
+ "creation": "2026-07-28 14:00:00.000000",
+ "description": "Bukti Pemotongan PPh Pasal 21 Tahunan (BPA1) \u2014 the annual withholding certificate given to a permanent employee. Generated from the payroll period's submitted salary slips; every figure comes from the same calculation the December salary slip used.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "payroll_period",
+  "col_head",
+  "company",
+  "tax_year",
+  "bp_number",
+  "bp_date",
+  "sec_identity",
+  "ptkp_status",
+  "ter_category",
+  "col_identity",
+  "npwp",
+  "nik",
+  "sec_income",
+  "gaji",
+  "tunjangan",
+  "natura",
+  "tantiem_bonus_thr",
+  "premi_asuransi",
+  "gross",
+  "sec_deductions",
+  "biaya_jabatan",
+  "iuran_pensiun",
+  "zakat",
+  "total_pengurangan",
+  "sec_taxable",
+  "neto",
+  "ptkp_self",
+  "ptkp_married",
+  "ptkp_dependants",
+  "ptkp",
+  "col_taxable",
+  "pkp",
+  "months_worked",
+  "annualised",
+  "pasal17_detail",
+  "sec_tax",
+  "annual_tax",
+  "tax_withheld_total",
+  "withheld_previous_employer",
+  "col_tax",
+  "dtp",
+  "difference",
+  "sec_source",
+  "salary_slips",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "options": "Employee",
+   "label": "Employee",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "fetch_from": "employee.employee_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "payroll_period",
+   "fieldtype": "Link",
+   "options": "Payroll Period",
+   "label": "Payroll Period",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "col_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "options": "Company",
+   "label": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tax_year",
+   "fieldtype": "Data",
+   "label": "Tax Year",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "bp_number",
+   "fieldtype": "Data",
+   "label": "Certificate Number",
+   "description": "The BPA1 number issued through Coretax."
+  },
+  {
+   "fieldname": "bp_date",
+   "fieldtype": "Date",
+   "label": "Certificate Date"
+  },
+  {
+   "fieldname": "sec_identity",
+   "fieldtype": "Section Break",
+   "label": "Employee Tax Identity"
+  },
+  {
+   "fieldname": "ptkp_status",
+   "fieldtype": "Data",
+   "label": "PTKP Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ter_category",
+   "fieldtype": "Data",
+   "label": "TER Category",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_identity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "npwp",
+   "fieldtype": "Data",
+   "label": "NPWP",
+   "read_only": 1
+  },
+  {
+   "fieldname": "nik",
+   "fieldtype": "Data",
+   "label": "NIK",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_income",
+   "fieldtype": "Section Break",
+   "label": "Penghasilan Bruto"
+  },
+  {
+   "fieldname": "gaji",
+   "fieldtype": "Currency",
+   "label": "1. Gaji atau Uang Pensiun Berkala",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tunjangan",
+   "fieldtype": "Currency",
+   "label": "2. Tunjangan Lainnya, Uang Lembur dan Sebagainya",
+   "read_only": 1
+  },
+  {
+   "fieldname": "natura",
+   "fieldtype": "Currency",
+   "label": "3. Natura/Kenikmatan yang Dikenakan Pemotongan",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tantiem_bonus_thr",
+   "fieldtype": "Currency",
+   "label": "4. Tantiem, Bonus, Gratifikasi, Jasa Produksi dan THR",
+   "read_only": 1
+  },
+  {
+   "fieldname": "premi_asuransi",
+   "fieldtype": "Currency",
+   "label": "5. Premi Asuransi Dibayar Pemberi Kerja",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gross",
+   "fieldtype": "Currency",
+   "label": "Jumlah Penghasilan Bruto",
+   "read_only": 1,
+   "bold": 1
+  },
+  {
+   "fieldname": "sec_deductions",
+   "fieldtype": "Section Break",
+   "label": "Pengurangan"
+  },
+  {
+   "fieldname": "biaya_jabatan",
+   "fieldtype": "Currency",
+   "label": "1. Biaya Jabatan / Biaya Pensiun",
+   "read_only": 1
+  },
+  {
+   "fieldname": "iuran_pensiun",
+   "fieldtype": "Currency",
+   "label": "2. Iuran Terkait Pensiun atau Hari Tua",
+   "read_only": 1
+  },
+  {
+   "fieldname": "zakat",
+   "fieldtype": "Currency",
+   "label": "3. Zakat / Sumbangan Keagamaan Wajib",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_pengurangan",
+   "fieldtype": "Currency",
+   "label": "Jumlah Pengurangan",
+   "read_only": 1,
+   "bold": 1
+  },
+  {
+   "fieldname": "sec_taxable",
+   "fieldtype": "Section Break",
+   "label": "Penghasilan Kena Pajak"
+  },
+  {
+   "fieldname": "neto",
+   "fieldtype": "Currency",
+   "label": "Penghasilan Neto Setahun",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ptkp_self",
+   "fieldtype": "Currency",
+   "label": "PTKP \u2014 untuk Wajib Pajak sendiri",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ptkp_married",
+   "fieldtype": "Currency",
+   "label": "PTKP \u2014 tambahan karena menikah",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ptkp_dependants",
+   "fieldtype": "Currency",
+   "label": "PTKP \u2014 tambahan tanggungan",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ptkp",
+   "fieldtype": "Currency",
+   "label": "PTKP Setahun",
+   "read_only": 1,
+   "bold": 1
+  },
+  {
+   "fieldname": "col_taxable",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pkp",
+   "fieldtype": "Currency",
+   "label": "Penghasilan Kena Pajak Setahun",
+   "read_only": 1,
+   "bold": 1
+  },
+  {
+   "fieldname": "months_worked",
+   "fieldtype": "Int",
+   "label": "Months Worked",
+   "read_only": 1
+  },
+  {
+   "fieldname": "annualised",
+   "fieldtype": "Check",
+   "label": "Disetahunkan",
+   "read_only": 1,
+   "description": "The part-year was annualised and the tax scaled back down."
+  },
+  {
+   "fieldname": "pasal17_detail",
+   "fieldtype": "Small Text",
+   "label": "Perhitungan Pasal 17",
+   "read_only": 1,
+   "description": "Each bracket as applied, as the certificate states it."
+  },
+  {
+   "fieldname": "sec_tax",
+   "fieldtype": "Section Break",
+   "label": "PPh Pasal 21"
+  },
+  {
+   "fieldname": "annual_tax",
+   "fieldtype": "Currency",
+   "label": "PPh Pasal 21 Terutang Setahun",
+   "read_only": 1,
+   "bold": 1
+  },
+  {
+   "fieldname": "tax_withheld_total",
+   "fieldtype": "Currency",
+   "label": "PPh Pasal 21 Telah Dipotong",
+   "read_only": 1,
+   "description": "Everything withheld across the year, the final period included."
+  },
+  {
+   "fieldname": "withheld_previous_employer",
+   "fieldtype": "Currency",
+   "label": "Dipotong Pemberi Kerja Sebelumnya",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_tax",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "dtp",
+   "fieldtype": "Currency",
+   "label": "PPh Pasal 21 Ditanggung Pemerintah (DTP)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "difference",
+   "fieldtype": "Currency",
+   "label": "Selisih",
+   "read_only": 1,
+   "bold": 1,
+   "description": "Annual tax less what was withheld. Zero on a complete year \u2014 anything else means a period is missing or the final settlement was not run."
+  },
+  {
+   "fieldname": "sec_source",
+   "fieldtype": "Section Break",
+   "label": "Source"
+  },
+  {
+   "fieldname": "salary_slips",
+   "fieldtype": "Small Text",
+   "label": "Salary Slips Included",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "options": "EIL Bukti Potong A1",
+   "label": "Amended From",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-07-28 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPbio Indonesia Localization",
+ "name": "EIL Bukti Potong A1",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "submit": 0,
+   "cancel": 0,
+   "amend": 0,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "HR Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "employee_name"
+}

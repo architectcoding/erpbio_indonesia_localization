@@ -24,7 +24,7 @@ from erpbio_indonesia_localization.pph21 import calculator
 # regular pay, which is the common case and the safe default; blank deductions
 # are ignored, because guessing that an arbitrary deduction is pension or zakat
 # would silently change someone's tax.
-EARNING_TREATMENTS = {"Teratur", "Tidak Teratur", "Natura", "Premi Pemberi Kerja"}
+EARNING_TREATMENTS = {"Gaji", "Teratur", "Tidak Teratur", "Natura", "Premi Pemberi Kerja"}
 DEDUCTION_TREATMENTS = {"Iuran Pensiun", "Zakat"}
 
 
@@ -91,7 +91,7 @@ def _amount_for_period(slip, employee, status, scheme):
 	totals = _year_to_date(slip, employee)
 	result = calculator.annual_reconciliation(
 		status,
-		gross_teratur=totals["teratur"],
+		gross_teratur=totals["gaji"] + totals["teratur"],
 		gross_tidak_teratur=totals["tidak_teratur"],
 		natura=totals["natura"],
 		employer_premium=totals["premi"],
@@ -139,7 +139,9 @@ def _year_to_date(slip, employee):
 	settings = frappe.get_cached_doc("EIL PPh 21 Settings")
 	period_start = frappe.db.get_value("Payroll Period", slip.payroll_period, "start_date")
 
-	totals = dict(teratur=0.0, tidak_teratur=0.0, natura=0.0, premi=0.0,
+	# `gaji` is tracked apart from the rest of the regular pay purely so the annual
+	# certificate can print DJP's two separate lines; tax treats them the same.
+	totals = dict(gaji=0.0, teratur=0.0, tidak_teratur=0.0, natura=0.0, premi=0.0,
 	              iuran_pensiun=0.0, zakat=0.0, withheld=0.0, months=0)
 
 	earlier = frappe.get_all(
@@ -170,6 +172,8 @@ def _absorb(totals, slip, treatments, settings, count_withholding=True):
 			totals["natura"] += flt(row.amount)
 		elif treatment == "Premi Pemberi Kerja":
 			totals["premi"] += flt(row.amount)
+		elif treatment == "Gaji":
+			totals["gaji"] += flt(row.amount)
 		elif treatment == "Teratur":
 			totals["teratur"] += flt(row.amount)
 

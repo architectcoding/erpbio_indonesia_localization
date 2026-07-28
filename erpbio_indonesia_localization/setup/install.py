@@ -394,12 +394,14 @@ CUSTOM_FIELDS = {
 			"fieldname": "eil_pph21_treatment",
 			"label": "PPh 21 Treatment",
 			"fieldtype": "Select",
-			"options": "\nTeratur\nTidak Teratur\nNatura\nPremi Pemberi Kerja\nIuran Pensiun\nZakat\nExcluded",
+			"options": "\nGaji\nTeratur\nTidak Teratur\nNatura\nPremi Pemberi Kerja\nIuran Pensiun\nZakat\nExcluded",
 			"insert_after": "statistical_component",
-			"description": "How the annual calculation treats this component. Teratur = regular pay; "
-			"Tidak Teratur = bonus, THR, tantiem, gratifikasi; Natura = benefits in kind; "
-			"Iuran Pensiun and Zakat are deductions; Excluded is left out entirely. "
-			"Blank means earnings count as Teratur and deductions are ignored.",
+			"description": "How the annual calculation treats this component. Gaji = basic salary or "
+			"periodic pension; Teratur = other regular pay (allowances, overtime); Tidak Teratur = "
+			"bonus, THR, tantiem, gratifikasi; Natura = benefits in kind; Iuran Pensiun and Zakat are "
+			"deductions; Excluded is left out entirely. Blank means earnings count as Teratur and "
+			"deductions are ignored. Gaji and Teratur are taxed identically — they differ only in "
+			"which line of the annual certificate they print on.",
 		},
 	],
 }
@@ -424,6 +426,7 @@ def setup_eil():
 	seed_transaction_codes()
 	seed_settings_defaults()
 	seed_pph21_rates()
+	seed_pph21_print_formats()
 
 
 def seed_pph21_rates():
@@ -438,6 +441,14 @@ def seed_pph21_rates():
 	from erpbio_indonesia_localization.pph21.rates_loader import load_rates
 
 	load_rates()
+
+
+def seed_pph21_print_formats():
+	if not frappe.db.exists("DocType", "EIL Bukti Potong A1"):
+		return
+	from erpbio_indonesia_localization.pph21.bpa1_print_format import seed_print_format
+
+	seed_print_format()
 	seed_pph21_component()
 
 
