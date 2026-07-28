@@ -142,9 +142,29 @@ def _strip_output_vat(doc):
 	removed = [r for r in rows if r.account_head in accounts]
 	if not removed:
 		return
-	doc.set("taxes", [r for r in rows if r.account_head not in accounts])
-	for i, row in enumerate(doc.get("taxes") or [], start=1):
+	kept = [r for r in rows if r.account_head not in accounts]
+	# "On Previous Row Total/Amount" names its base by ROW POSITION, so removing a
+	# row from the middle silently repoints every reference below it at the wrong
+	# row. Renumber and remap together, or the two disagree.
+	new_idx = {r.idx: i for i, r in enumerate(kept, start=1)}
+	doc.set("taxes", kept)
+	for i, row in enumerate(kept, start=1):
 		row.idx = i
+		if not row.row_id:
+			continue
+		target = new_idx.get(cint(row.row_id))
+		if not target:
+			# It was computed ON the PPN we just removed. There is no honest base
+			# left to point at, and guessing one would invent a tax figure.
+			frappe.throw(
+				frappe._(
+					"Row {0} ({1}) is calculated from the PPN row, which is removed on a "
+					"government (pemungut/WAPU) invoice. Use a tax template whose charges "
+					"do not depend on the PPN for this customer."
+				).format(i, row.description or row.account_head),
+				title=frappe._("Government buyer"),
+			)
+		row.row_id = target
 	frappe.msgprint(
 		frappe._("Removed {0} from Taxes and Charges: this is a government (pemungut/WAPU) buyer, so the PPN is collected by the buyer and is shown under Government Tax instead.").format(
 			", ".join(sorted({r.account_head for r in removed}))
