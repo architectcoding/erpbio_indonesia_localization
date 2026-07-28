@@ -771,3 +771,6 @@ msgstr "Tanpa nomor dokumen — faktur akan mengirim \"-\""
 
 msgid "You can view this buyer's tax identity but not change it — that needs write access to Customer."
 msgstr "Anda dapat melihat identitas pajak pembeli ini tetapi tidak dapat mengubahnya — itu memerlukan hak tulis pada Pelanggan."
+
+msgid "Apps"
+msgstr "Aplikasi"

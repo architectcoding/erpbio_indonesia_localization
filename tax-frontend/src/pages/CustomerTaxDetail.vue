@@ -75,7 +75,7 @@
 			<section class="mb-4 rounded-lg border bg-surface-white p-4">
 				<h2 class="mb-1 text-sm font-semibold text-ink-gray-8">{{ __("Government (Pemungut / WAPU)") }}</h2>
 				<label class="mt-2 flex items-start gap-2 text-sm text-ink-gray-8">
-					<input type="checkbox" v-model="form.eil_is_pemungut" :disabled="!canWrite" class="mt-0.5" :true-value="1" :false-value="0" />
+					<input type="checkbox" v-model="form.eil_is_pemungut" :disabled="!canWrite" class="desk-checkbox mt-0.5" :true-value="1" :false-value="0" />
 					<span>
 						{{ __("This buyer deposits the PPN itself and withholds PPh 22") }}
 						<span class="block text-xs text-ink-gray-4">

@@ -21,3 +21,39 @@ body {
 .text-ink-blue-link:hover {
 	text-decoration-color: var(--ink-gray-7);
 }
+
+/* Copied verbatim from erpbio_general's SPA main.css so a checkbox looks the
+   same in every ERPbio app — a bare <input type=checkbox> renders as a stark
+   white box that ignores the dark theme. */
+.desk-checkbox {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 1rem;
+	height: 1rem;
+	border-radius: 5px;
+	/* ink token so the outline stays visible on the darker header bar too */
+	border: 1.5px solid var(--ink-gray-4);
+	background-color: var(--surface-white);
+	cursor: pointer;
+	flex-shrink: 0;
+	position: relative;
+	vertical-align: middle;
+}
+.desk-checkbox:hover {
+	border-color: var(--ink-gray-6);
+}
+.desk-checkbox:checked {
+	background-color: var(--ink-gray-9);
+	border-color: var(--ink-gray-9);
+}
+.desk-checkbox:checked::after {
+	content: "";
+	position: absolute;
+	left: 4.5px;
+	top: 1.5px;
+	width: 5px;
+	height: 9px;
+	border: solid var(--surface-white);
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+}

@@ -1163,3 +1163,30 @@ def save_customer_tax(payload):
 			doc.set(field, payload[field])
 	doc.save()
 	return get_customer_tax(name)
+
+
+# --------------------------------------------------------------- app selector
+@frappe.whitelist()
+def get_launcher_apps():
+	"""The other ERPbio apps this user may open, for the account menu's app
+	selector.
+
+	Delegates to erpbio_general, which owns the app registry, the role gating and
+	the configurable titles — duplicating that here would drift. Unlike the
+	notification and language endpoints this one cannot be ported, because the
+	answer *is* "which sibling apps exist": with erpbio_general absent there is
+	nothing to switch to, so it returns nothing and the selector hides itself.
+	That keeps this app installable on its own, the difference being a soft
+	dependency (the feature disappears) rather than a hard one (the app breaks).
+	"""
+	if frappe.session.user == "Guest":
+		return []
+	try:
+		from erpbio_general.api.home import get_launcher_apps as launcher_apps
+	except ImportError:
+		return []
+	try:
+		return launcher_apps()
+	except Exception:
+		# A sibling app's misconfiguration must not take this app's shell down.
+		return []

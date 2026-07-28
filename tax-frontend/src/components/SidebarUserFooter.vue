@@ -80,17 +80,20 @@
 // Modelled on erpbio_general's accounting-frontend/SidebarUserFooter.vue but
 // deliberately NOT a copy of it: most of that menu is erpbio_general-coupled and
 // cannot work in a standalone install of this app —
-//   * the Apps launcher flyout reads erpbio_general's launcherApps resource,
 //   * Send Feedback posts to erpbio_general.api.feedback,
 //   * "Open ERPbio Mobile" is an erpbio_general route,
 //   * "Customize Sidebar" drives a per-workspace nav-layout system this app has
 //     no equivalent of (7 nav items in 4 groups, no rail, nothing to customize),
 //   * "Install as app" needs a PWA manifest this app doesn't ship.
-// What remains is what works on core alone: Desk, language, about, log out.
-import { computed, inject, ref } from "vue"
+// What remains is what works on core alone: Desk, language, about, log out —
+// plus the app selector, which asks this app's own endpoint and simply hides
+// itself when there are no sibling apps to switch to (see api/tax.get_launcher_apps).
+import { computed, inject, markRaw, ref } from "vue"
 import { Dialog, Dropdown, FeatherIcon, call } from "frappe-ui"
 import { useTheme } from "@/composables/useTheme"
 import AboutDialog from "@/components/AboutDialog.vue"
+import AppsMenuItem from "@/components/AppsMenuItem.vue"
+import { launcherApps, ensureLauncherAppsLoaded } from "@/data/launcherApps"
 
 const __ = inject("$translate")
 const session = inject("$session")
@@ -109,7 +112,16 @@ const initials = computed(() =>
 
 const aboutOpen = ref(false)
 
+// Prefetched here so the flyout is populated the moment the menu opens.
+const appsMenuItem = markRaw(AppsMenuItem)
+ensureLauncherAppsLoaded()
+const hasApps = computed(() => (launcherApps.data || []).length > 0)
+
 const userMenu = computed(() => [
+	// Hidden entirely when nothing else is installed to switch to.
+	...(hasApps.value
+		? [{ group: __("Apps"), hideLabel: true, items: [{ component: appsMenuItem }] }]
+		: []),
 	{ label: __("Switch to Desk"), icon: "monitor", onClick: () => (window.location.href = "/app") },
 	{ label: languageMenuLabel.value, icon: "globe", onClick: openLanguage },
 	{ label: __("About"), icon: "info", onClick: () => (aboutOpen.value = true) },
