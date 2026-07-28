@@ -618,8 +618,9 @@ def get_invoice_govt_charges(sales_invoice):
 		"grand_total": flt(doc.base_grand_total),
 		# The two bases a rate can apply to, so the panel previews the figure the
 		# server will actually save. See dpp_base_for().
-		"vat_base": flt(dpp_base_for(doc, PPN_TREATMENT)),
-		"billed_base": flt(dpp_base_for(doc, None)),
+		"vat_base": flt(dpp_base_for(doc, {"treatment": PPN_TREATMENT})),
+		"billed_base": flt(dpp_base_for(doc, {"base": "Net Total + Charges"})),
+		"bases": _govt_bases(),
 		"outstanding": flt(doc.outstanding_amount),
 		"can_edit": not blocker and frappe.has_permission("Sales Invoice", "write", sales_invoice),
 		"blocked_reason": blocker,
@@ -631,6 +632,7 @@ def get_invoice_govt_charges(sales_invoice):
 				"account": r.account,
 				"rate": flt(r.rate),
 				"amount": flt(r.amount),
+				"base": r.base or "Automatic",
 				"show_on_print": cint(r.show_on_print),
 				"clear_on_payment": cint(r.clear_on_payment),
 				"description": r.description,
@@ -638,6 +640,11 @@ def get_invoice_govt_charges(sales_invoice):
 			for r in doc.get("eil_govt_charges") or []
 		],
 	}
+
+
+def _govt_bases():
+	f = frappe.get_meta("EIL Govt Tax Charge").get_field("base")
+	return [o for o in (f.options or "").split("\n") if o]
 
 
 def _govt_treatments():
@@ -729,7 +736,7 @@ def update_invoice_govt_charges(sales_invoice, charges):
 			continue
 		amount = flt(r.get("amount"))
 		rate = flt(r.get("rate"))
-		base = dpp_base_for(doc, r.get("treatment") or "PPN Dipungut Pemungut")
+		base = dpp_base_for(doc, r)
 		# Same rule as the invoice hook: a rate recomputes the amount, a blank rate
 		# keeps the figure that was typed (which is how an actual bukti potong is
 		# entered when it differs from the standard rate).
@@ -741,6 +748,7 @@ def update_invoice_govt_charges(sales_invoice, charges):
 				"treatment": r.get("treatment") or "PPN Dipungut Pemungut",
 				"account": r["account"],
 				"rate": rate,
+				"base": r.get("base") or "Automatic",
 				"amount": amount,
 				"show_on_print": cint(r.get("show_on_print")),
 				"description": r.get("description"),

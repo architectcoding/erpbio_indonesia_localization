@@ -16,7 +16,7 @@ import re
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, format_datetime, getdate, now_datetime
+from frappe.utils import cint, flt, format_datetime, getdate, now_datetime
 
 FAKTUR_HEADERS = [
 	"Baris",
@@ -54,6 +54,45 @@ DETAIL_HEADERS = [
 	"Tarif PPnBM",
 	"PPnBM",
 ]
+
+
+def _invoice_ppn(si):
+	"""The PPN the invoice itself charges, whichever way it carries it.
+
+	An ordinary invoice has output-VAT rows; a government one had them stripped
+	and carries the figure in eil_govt_charges instead."""
+	from erpbio_indonesia_localization.doc_events.sales_invoice import (
+		PPN_TREATMENT,
+		_output_vat_accounts,
+	)
+
+	if cint(si.get("eil_is_pemungut")):
+		return flt(
+			sum(
+				flt(r.amount)
+				for r in (si.get("eil_govt_charges") or [])
+				if r.treatment == PPN_TREATMENT
+			),
+			2,
+		)
+	accounts = _output_vat_accounts(si.company)
+	return flt(
+		sum(flt(r.base_tax_amount or r.tax_amount) for r in (si.get("taxes") or []) if r.account_head in accounts),
+		2,
+	)
+
+
+def _charge_mappings():
+	"""Charge account -> how it should appear as a faktur line."""
+	return {
+		r.account: r
+		for r in frappe.get_all(
+			"EIL Taxable Charge Mapping",
+			filters={"parenttype": "Indonesia Tax Settings"},
+			fields=["account", "barang_jasa", "goods_code", "coretax_unit", "description"],
+		)
+		if r.account
+	}
 
 
 def _digits(value):
@@ -137,7 +176,43 @@ class CoretaxFakturExport(Document):
 				problems.append(_("no Coretax Unit for {0} (uom {1})").format(item.item_code, item.uom))
 				break  # one unit message is enough
 
+		problems.extend(self._charge_problems(si, settings))
 		return (False, "; ".join(problems)) if problems else (True, _("Ready"))
+
+	def _charge_problems(self, si, settings):
+		"""A charge inside the DPP that the faktur cannot state, and any residual
+		gap between the faktur's PPN and the invoice's own.
+
+		The reconciliation is the real guard: a faktur that reports less PPN than
+		the invoice charged is under-declared output tax, and no amount of
+		per-case reasoning about tax templates is worth trusting on its own."""
+		from erpbio_indonesia_localization.doc_events.sales_invoice import taxable_charge_rows
+
+		problems = []
+		mappings = _charge_mappings()
+		for row in taxable_charge_rows(si):
+			if not flt(row.base_tax_amount or row.tax_amount):
+				continue
+			m = mappings.get(row.account_head)
+			if not m or not m.coretax_unit:
+				problems.append(
+					_("{0} is charged PPN but has no Taxable Charge Mapping in Indonesia Tax Settings").format(
+						row.description or row.account_head
+					)
+				)
+		if problems:
+			return problems  # the totals cannot balance while a line is missing
+
+		invoice_ppn = _invoice_ppn(si)
+		faktur_ppn = flt(sum(line["ppn"] for line in self._faktur_lines(si, settings)), 2)
+		if abs(faktur_ppn - invoice_ppn) > 1:
+			problems.append(
+				_("faktur PPN {0} does not match the invoice's {1} — check the tax template").format(
+					frappe.format_value(faktur_ppn, {"fieldtype": "Currency"}),
+					frappe.format_value(invoice_ppn, {"fieldtype": "Currency"}),
+				)
+			)
+		return problems
 
 	def _resolve_unit(self, item_row):
 		"""Item's explicit Coretax Unit, else the Coretax Unit mapped to the
@@ -188,6 +263,44 @@ class CoretaxFakturExport(Document):
 		self.db_set("status", "Generated")
 		return {"file_url": file_doc.file_url, "invoices": len(valid_rows)}
 
+	def _faktur_lines(self, si, settings):
+		"""Every line the faktur carries: the items, then one line per charge that
+		sits inside the DPP.
+
+		A taxed charge is part of the base but is not an item, and Coretax checks
+		DPP = Harga Satuan x Jumlah - Diskon on each line, so it cannot be folded
+		into an item's DPP without inventing that item's unit price. It gets its
+		own line instead, priced at the charge itself."""
+		from erpbio_indonesia_localization.doc_events.sales_invoice import taxable_charge_rows
+
+		lines = [self._line_values(item, settings) for item in si.items]
+		mappings = _charge_mappings()
+		for row in taxable_charge_rows(si):
+			amount = flt(row.base_tax_amount or row.tax_amount, 2)
+			if not amount:
+				continue
+			m = mappings.get(row.account_head) or frappe._dict()
+			lines.append(
+				self._line_values(
+					frappe._dict(
+						{
+							"item_code": None,
+							"item_name": m.description or row.description or row.account_head,
+							"uom": None,
+							"qty": 1,
+							"net_rate": amount,
+							"net_amount": amount,
+							"_charge_account": row.account_head,
+							"_barang_jasa": m.barang_jasa,
+							"_goods_code": m.goods_code,
+							"_unit": m.coretax_unit,
+						}
+					),
+					settings,
+				)
+			)
+		return lines
+
 	def _line_values(self, item, settings):
 		"""One invoice line's tax figures, shared by the workbook and the XML."""
 		tarif = flt(settings.tarif_ppn) or 12.0
@@ -195,12 +308,17 @@ class CoretaxFakturExport(Document):
 		den = settings.dpp_denominator or 12
 		dpp = flt(item.net_amount, 2)
 		dpp_lain = flt(dpp * num / den, 2) if settings.use_dpp_nilai_lain else dpp
+		charge = item.get("_charge_account")
 		return {
-			"opt": self._barang_jasa(item),
-			"code": (item.item_code and frappe.db.get_value("Item", item.item_code, "eil_goods_code"))
-			or "000000",
+			"opt": (item.get("_barang_jasa") or "B - Jasa")[0] if charge else self._barang_jasa(item),
+			"code": (item.get("_goods_code") or "000000")
+			if charge
+			else (
+				(item.item_code and frappe.db.get_value("Item", item.item_code, "eil_goods_code"))
+				or "000000"
+			),
 			"name": item.item_name or item.item_code,
-			"unit": self._resolve_unit(item),
+			"unit": item.get("_unit") if charge else self._resolve_unit(item),
 			"price": flt(item.net_rate, 2),
 			"qty": flt(item.qty, 2),
 			"discount": 0,
@@ -248,8 +366,7 @@ class CoretaxFakturExport(Document):
 					buyer["idtku"],
 				]
 			)
-			for item in si.items:
-				line = self._line_values(item, settings)
+			for line in self._faktur_lines(si, settings):
 				ws_detail.append(
 					[
 						baris,
@@ -343,8 +460,7 @@ class CoretaxFakturExport(Document):
 			ET.SubElement(inv, "BuyerEmail").text = buyer["email"]
 			ET.SubElement(inv, "BuyerIDTKU").text = buyer["idtku"]
 			goods_el = ET.SubElement(inv, "ListOfGoodService")
-			for item in si.items:
-				line = self._line_values(item, settings)
+			for line in self._faktur_lines(si, settings):
 				g = ET.SubElement(goods_el, "GoodService")
 				ET.SubElement(g, "Opt").text = line["opt"]
 				ET.SubElement(g, "Code").text = line["code"]

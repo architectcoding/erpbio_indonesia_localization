@@ -73,7 +73,15 @@ def govt_rows_for(taxes_and_charges, company):
 		rows = frappe.get_all(
 			"EIL Govt Tax Charge",
 			filters={"parent": taxes_and_charges, "parenttype": "Sales Taxes and Charges Template"},
-			fields=["treatment", "account", "rate", "show_on_print", "clear_on_payment", "description"],
+			fields=[
+				"treatment",
+				"account",
+				"rate",
+				"base",
+				"show_on_print",
+				"clear_on_payment",
+				"description",
+			],
 			order_by="idx asc",
 		)
 		if rows:
@@ -196,44 +204,116 @@ def _vat_base(doc):
 	template. `On Previous Row Total` points at a row that by definition sits
 	ABOVE the VAT row and therefore survived the strip, and ERPNext has already
 	accumulated exactly the base we want into that row's `base_total`."""
-	template = doc.get("taxes_and_charges")
-	if not template:
+	inside = _template_inside_count(doc, _output_vat_accounts(doc.company))
+	if inside is None:
 		return None
-	rows = frappe.get_all(
+	if inside <= 0:
+		return flt(doc.base_net_total)
+	surviving = doc.get("taxes") or []
+	if not 1 <= inside <= len(surviving):
+		return None
+	return flt(surviving[inside - 1].base_total)
+
+
+def taxable_charge_rows(doc):
+	"""The Taxes and Charges rows that sit INSIDE the PPN base.
+
+	They are part of the DPP but are not items, so the faktur needs a line for
+	each — Coretax checks DPP = price x qty - discount per line, which no share
+	folded into an item's DPP could satisfy. Derived here rather than in the
+	export so the figure the invoice charges and the figure the faktur reports
+	come from one decision.
+
+	Government and ordinary invoices reach the same answer by different routes:
+	the government one has had its PPN row removed, so it asks the charge row
+	that replaced it; an ordinary one still has the row and is read directly."""
+	rows = doc.get("taxes") or []
+	if not rows:
+		return []
+	accounts = _output_vat_accounts(doc.company)
+
+	if cint(doc.get("eil_is_pemungut")):
+		ppn = next((r for r in _charges(doc) if r.get("treatment") == PPN_TREATMENT), None)
+		base = (ppn.get("base") if ppn else None) or "Automatic"
+		if base == "Net Total":
+			return []
+		if base == "Net Total + Charges":
+			return [r for r in rows if r.account_head not in accounts]
+		inside = _template_inside_count(doc, accounts)
+	else:
+		vat = next((r for r in rows if r.account_head in accounts), None)
+		if not vat:
+			return []
+		if vat.charge_type == "On Net Total":
+			inside = 0
+		elif vat.charge_type == "On Previous Row Total":
+			inside = cint(vat.row_id)
+		else:
+			inside = None
+
+	charges = [r for r in rows if r.account_head not in accounts]
+	if inside is None:
+		# Same fallback as dpp_base_for: the whole billed value, so the faktur
+		# reports every charge the base was widened by.
+		return charges
+	if inside <= 0:
+		return []
+	return [r for r in rows[:inside] if r.account_head not in accounts]
+
+
+def _template_inside_count(doc, accounts):
+	"""How many leading charge rows the template's PPN row taxes.
+
+	0 = the items alone, n = the first n charge rows as well, None = the template
+	does not say (no template, a hand-entered PPN, or a shape whose positions
+	cannot be trusted). None is not 0: the callers fall back to the whole billed
+	value rather than silently narrowing the base."""
+	if not doc.get("taxes_and_charges"):
+		return None
+	tpl = frappe.get_all(
 		"Sales Taxes and Charges",
-		filters={"parent": template, "parenttype": "Sales Taxes and Charges Template"},
+		filters={"parent": doc.taxes_and_charges, "parenttype": "Sales Taxes and Charges Template"},
 		fields=["idx", "charge_type", "row_id", "account_head"],
 		order_by="idx asc",
 	)
-	accounts = _output_vat_accounts(doc.company)
-	vat = next((r for r in rows if r.account_head in accounts), None)
+	vat = next((r for r in tpl if r.account_head in accounts), None)
 	if not vat:
-		return None  # no output VAT in the template — nothing to read the base off
+		return None
 	if vat.charge_type == "On Net Total":
-		return flt(doc.base_net_total)
+		return 0
 	if vat.charge_type != "On Previous Row Total":
-		return None  # a hand-entered PPN has no base to recover
+		return None
 	idx = cint(vat.row_id)
-	surviving = doc.get("taxes") or []
-	if not 1 <= idx <= len(surviving):
-		return None
 	# Positional only holds while nothing below `idx` was stripped out.
-	if any(r.account_head in accounts for r in rows if r.idx <= idx):
+	if any(r.account_head in accounts for r in tpl if r.idx <= idx):
 		return None
-	return flt(surviving[idx - 1].base_total)
+	return idx
 
 
-def dpp_base_for(doc, treatment=None):
-	"""The base a government charge is computed on.
+def dpp_base_for(doc, row=None):
+	"""The base a government charge is computed on, from the charge row itself.
 
-	PPN follows the template (see `_vat_base`). A withholding does not: PPh 22 is
-	taken on the purchase price the treasurer actually pays, which includes the
-	freight and handling billed alongside the goods, so it keeps the full billed
-	value regardless of where the PPN row sat."""
-	if treatment == PPN_TREATMENT:
-		base = _vat_base(doc)
-		if base is not None:
-			return base
+	The row states it because the tax table cannot always be trusted to: the PPN
+	row is stripped from a government invoice, and an accountant who edits the
+	remaining rows by hand leaves the picked template no longer describing the
+	invoice. Stating it on the row that carries the tax removes the inference —
+	and because this child table is used on the selling template as well as the
+	invoice, the same field authors the default and overrides it per invoice.
+
+	`Automatic` keeps the derivation: PPN follows the template's own PPN row,
+	while a withholding takes the full billed amount — PPh 22 is taken on the
+	purchase price the treasurer actually pays, which includes the freight and
+	handling billed alongside the goods. Rows written before this field existed
+	come back empty and are read as Automatic, so nothing changes under them."""
+	base = (row.get("base") if row else None) or "Automatic"
+	if base == "Net Total":
+		return flt(doc.base_net_total)
+	if base == "Net Total + Charges":
+		return _billed_base(doc)
+	if (row.get("treatment") if row else None) == PPN_TREATMENT:
+		derived = _vat_base(doc)
+		if derived is not None:
+			return derived
 	return _billed_base(doc)
 
 
@@ -273,7 +353,7 @@ def validate(doc, method=None):
 		apply_treatment_rules(row)
 		if not flt(row.rate):
 			continue  # a hand-entered figure from the bukti potong — leave it alone
-		base = dpp_base_for(doc, row.get("treatment"))
+		base = dpp_base_for(doc, row)
 		row.amount = flt(base * flt(row.rate) / 100.0, doc.precision("base_net_total"))
 		if not cint(row.clear_on_payment):
 			# A withholding may already have been taken when an advance was paid:

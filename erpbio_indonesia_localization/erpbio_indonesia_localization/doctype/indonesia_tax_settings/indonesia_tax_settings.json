@@ -17,7 +17,9 @@
   "pemungut_section",
   "pemungut_customer_groups",
   "output_vat_accounts",
-  "govt_tax_defaults"
+  "govt_tax_defaults",
+  "taxable_charge_section",
+  "taxable_charge_mappings"
  ],
  "fields": [
   {
@@ -107,6 +109,19 @@
    "fieldtype": "Table",
    "label": "Government Tax Defaults",
    "options": "EIL Govt Tax Default"
+  },
+  {
+   "fieldname": "taxable_charge_section",
+   "fieldtype": "Section Break",
+   "label": "Taxable Charges on the Faktur",
+   "collapsible": 1,
+   "description": "A charge billed INSIDE the PPN base — freight taxed by an \"On Previous Row Total\" PPN row — is part of the DPP but is not an item, so it needs its own faktur line. Map each such account here. Charges billed outside the PPN need no mapping."
+  },
+  {
+   "fieldname": "taxable_charge_mappings",
+   "fieldtype": "Table",
+   "label": "Taxable Charge Mapping",
+   "options": "EIL Taxable Charge Mapping"
   }
  ],
  "issingle": 1,
