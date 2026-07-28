@@ -39,6 +39,13 @@ def ter_category(status, on_date=None):
 	return _ptkp_row(status, on_date).ter_category
 
 
+def daily_bands(on_date=None):
+	"""The TER Harian bands in force, so callers can read the threshold above
+	which the daily rate stops applying instead of hardcoding it."""
+	require_verified_tables()
+	return _rows("EIL TER Bracket", on_date, filters={"category": "Harian"})
+
+
 def ter_category_or_none(status, on_date=None):
 	"""The TER category, or None when the tables cannot answer.
 

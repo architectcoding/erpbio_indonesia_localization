@@ -41,7 +41,8 @@ def apply_pph21_deduction(slip):
 		return
 
 	employee = frappe.get_cached_doc("Employee", slip.employee)
-	calculator.require_supported_scheme(employee.get("eil_pph21_scheme"))
+	scheme = employee.get("eil_pph21_scheme")
+	calculator.require_supported_scheme(scheme)
 	status = employee.get("eil_ptkp_status")
 	if not status:
 		frappe.throw(
@@ -51,7 +52,7 @@ def apply_pph21_deduction(slip):
 			title=_("PTKP status missing"),
 		)
 
-	amount = _amount_for_period(slip, employee, status)
+	amount = _amount_for_period(slip, employee, status, scheme)
 	# HRMS's own routine, so the row picks up the component's flags and precision
 	# exactly as any other deduction would. The component is seeded with
 	# depends_on_payment_days = 0: a month's tax follows that month's gross, which
@@ -80,9 +81,11 @@ def _structure_includes(slip, component):
 	)
 
 
-def _amount_for_period(slip, employee, status):
+def _amount_for_period(slip, employee, status, scheme):
 	on_date = getdate(slip.end_date)
-	if not _is_final_period(slip):
+	# A pegawai tidak tetap on monthly payroll is charged the monthly rate in
+	# every period including the last — no year-end settlement.
+	if not calculator.reconciles_annually(scheme) or not _is_final_period(slip):
 		return calculator.monthly_withholding(status, _period_gross(slip), on_date)
 
 	totals = _year_to_date(slip, employee)

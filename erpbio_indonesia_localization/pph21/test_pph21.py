@@ -174,7 +174,9 @@ class TestPPh21Calculator(FrappeTestCase):
 		self.assertFalse(part["annualised"])
 
 	def test_unsupported_scheme_throws(self):
-		for scheme in ("Non-permanent", "Expatriate", "Pensioner"):
+		# Non-permanent was unsupported in P1 and is calculated now; see
+		# TestPph21NonPermanent. These two remain unimplemented.
+		for scheme in ("Expatriate", "Pensioner"):
 			with self.assertRaises(frappe.ValidationError):
 				calculator.require_supported_scheme(scheme)
 		calculator.require_supported_scheme("Permanent")  # must not raise
@@ -190,3 +192,76 @@ def _verify_tables():
 	frappe.db.set_single_value("EIL PPh 21 Settings", "tables_verified", 1)
 	frappe.clear_cache(doctype="EIL PPh 21 Settings")
 	frappe.local._eil_pph21_tables = {}
+
+
+class TestPph21NonPermanent(FrappeTestCase):
+	"""PMK 168/2023's own worked examples for pegawai tidak tetap (pp. 39-40)."""
+
+	def setUp(self):
+		frappe.db.set_single_value("EIL PPh 21 Settings", "tables_verified", 1)
+		frappe.clear_cache(doctype="EIL PPh 21 Settings")
+		frappe.local._eil_pph21_tables = {}
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def test_tuan_l_piece_work_averages_to_a_zero_rated_day(self):
+		"""Rp 4,500,000 for ten days of frame assembly is a Rp 450,000 day, which
+		is the top of the 0% band — nothing withheld."""
+		daily = calculator.average_daily_gross(4_500_000, 10)
+		self.assertEqual(daily, 450_000)
+		self.assertEqual(calculator.daily_withholding(daily), 0)
+
+	def test_tuan_m_above_the_daily_ceiling_uses_pasal_17_on_half(self):
+		"""Rp 3,000,000 in a day exceeds the daily table, so 5% x 50% x gross."""
+		self.assertEqual(calculator.daily_withholding(3_000_000), 75_000)
+
+	def test_daily_band_boundaries(self):
+		self.assertEqual(calculator.daily_withholding(450_000), 0)
+		# first rupiah into the 0.5% band
+		self.assertEqual(calculator.daily_withholding(450_001), round(450_001 * 0.005))
+		self.assertEqual(calculator.daily_withholding(2_500_000), 12_500)
+		# one rupiah past the ceiling switches mechanism entirely
+		self.assertEqual(calculator.daily_withholding(2_500_001), round(2_500_001 * 0.5 * 0.05))
+
+	def test_average_daily_gross_rejects_zero_days(self):
+		with self.assertRaises(frappe.ValidationError):
+			calculator.average_daily_gross(1_000_000, 0)
+
+	def test_tuan_n_monthly_paid_non_permanent_full_year(self):
+		"""The twelve-month table from PMK 168 p.40: a TK/0 tea picker paid
+		monthly. Each month stands alone on TER A — December included."""
+		months = [
+			(4_000_000, 0),
+			(7_000_000, 87_500),
+			(1_000_000, 0),
+			(7_000_000, 87_500),
+			(8_000_000, 120_000),
+			(6_000_000, 45_000),
+			(7_000_000, 87_500),
+			(8_000_000, 120_000),
+			(6_000_000, 45_000),
+			(9_000_000, 157_500),
+			(2_000_000, 0),
+			(8_000_000, 120_000),
+		]
+		total_gross = total_tax = 0
+		for gross, expected in months:
+			got = calculator.monthly_withholding("TK/0", gross)
+			self.assertEqual(got, expected, f"gross {gross:,}")
+			total_gross += gross
+			total_tax += got
+		self.assertEqual(total_gross, 73_000_000)
+		self.assertEqual(total_tax, 870_000)
+
+	def test_non_permanent_does_not_reconcile_annually(self):
+		self.assertTrue(calculator.reconciles_annually("Permanent"))
+		self.assertFalse(calculator.reconciles_annually("Non-permanent"))
+
+	def test_unsupported_schemes_still_throw(self):
+		for scheme in ("Expatriate", "Pensioner"):
+			with self.assertRaises(frappe.ValidationError):
+				calculator.require_supported_scheme(scheme)
+		# these two must not throw
+		calculator.require_supported_scheme("Permanent")
+		calculator.require_supported_scheme("Non-permanent")

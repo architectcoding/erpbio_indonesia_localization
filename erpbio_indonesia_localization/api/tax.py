@@ -1300,8 +1300,12 @@ def _live_ter_category(status):
 
 
 def _employee_pph21_status(row):
+	# Asks the calculator which schemes it implements rather than repeating the
+	# list, so this page cannot claim a scheme is unsupported after it is built.
+	from erpbio_indonesia_localization.pph21.calculator import SUPPORTED_SCHEMES
+
 	scheme = row.get("eil_pph21_scheme") or "Permanent"
-	if scheme != "Permanent":
+	if scheme not in SUPPORTED_SCHEMES:
 		return "Unsupported", _("The {0} scheme is not calculated yet").format(scheme)
 	if not row.get("eil_ptkp_status"):
 		return "Blocked", _("No PTKP status — PPh 21 cannot be calculated")

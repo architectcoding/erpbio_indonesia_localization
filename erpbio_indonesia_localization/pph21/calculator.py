@@ -1,14 +1,19 @@
 # Copyright (c) 2026, Architect Coding and contributors
 # For license information, please see license.txt
 
-"""PPh 21 for a permanent employee (pegawai tetap).
+"""PPh 21 for permanent and non-permanent employees.
 
-Two calculations, per PP 58/2023:
+Three calculations, per PP 58/2023 and PMK 168/2023:
 
-* every period except the last — gross for the period x the TER effective rate;
-* the last period — the full annual calculation on Pasal 17, less what has
-  already been withheld. The difference lands in that period, and can be
-  negative when TER over-withheld.
+* any ordinary period — gross for the period x the TER effective rate;
+* the final period, pegawai tetap only — the full annual calculation on
+  Pasal 17, less what has already been withheld. The difference lands in that
+  period, and can be negative when TER over-withheld.
+* a non-monthly payment to a pegawai tidak tetap — the daily table, or, above
+  its ceiling, Pasal 17 on half the gross.
+
+A non-permanent employee paid monthly simply gets the monthly rate every month,
+December included: there is no annual settlement for them.
 
 Pure functions over plain numbers: no documents, no side effects. That keeps the
 annual path testable without generating twelve salary slips, and it is what lets
@@ -30,7 +35,7 @@ from frappe.utils import flt
 
 from erpbio_indonesia_localization.pph21 import tables
 
-SUPPORTED_SCHEMES = ("Permanent",)
+SUPPORTED_SCHEMES = ("Permanent", "Non-permanent")
 
 
 def monthly_withholding(ptkp_status, period_gross, on_date=None):
@@ -38,6 +43,35 @@ def monthly_withholding(ptkp_status, period_gross, on_date=None):
 	category = tables.ter_category(ptkp_status, on_date)
 	rate = tables.ter_rate(category, period_gross, on_date)
 	return _round_rupiah(flt(period_gross) * rate / 100.0)
+
+
+def daily_withholding(daily_gross, on_date=None):
+	"""A non-monthly payment to a pegawai tidak tetap (PMK 168 Pasal 15).
+
+	Two rules, split at the top of the TER Harian table:
+	  * up to that, the daily effective rate on the day's gross;
+	  * above it, the Pasal 17 brackets on *half* the gross — a different
+	    mechanism, not a further band of the same table, which is why the daily
+	    table is deliberately not open-ended.
+
+	The threshold is read from the table rather than written here, so it moves
+	when the regulation does.
+	"""
+	daily_gross = flt(daily_gross)
+	threshold = _daily_threshold(on_date)
+	if daily_gross <= threshold:
+		rate = tables.ter_rate("Harian", daily_gross, on_date)
+		return _round_rupiah(daily_gross * rate / 100.0)
+	return _round_rupiah(tables.pasal17_tax(daily_gross * 0.5, on_date))
+
+
+def average_daily_gross(total_gross, days):
+	"""Piece and contract work is assessed on the average day, not the payment:
+	Rp 4,500,000 for ten days' work is a Rp 450,000 day."""
+	days = int(flt(days) or 0)
+	if days < 1:
+		frappe.throw(_("Days worked must be at least 1, got {0}.").format(days))
+	return flt(total_gross) / days
 
 
 def annual_reconciliation(
@@ -111,15 +145,25 @@ def annual_reconciliation(
 	}
 
 
+def reconciles_annually(scheme):
+	"""Whether the final period settles the year on Pasal 17.
+
+	Only pegawai tetap do. A non-permanent employee paid monthly is charged the
+	monthly effective rate in December exactly as in every other month — PMK 168's
+	own worked example ends the year with a plain 1.5% month, not a settlement.
+	"""
+	return (scheme or "Permanent") == "Permanent"
+
+
 def require_supported_scheme(scheme):
-	"""Phase 1 handles permanent employees only. Anything else throws rather than
-	silently borrowing the wrong scheme's arithmetic."""
+	"""Expatriate and pensioner schemes are not implemented. They throw rather
+	than silently borrowing another scheme's arithmetic."""
 	if (scheme or "Permanent") not in SUPPORTED_SCHEMES:
 		frappe.throw(
 			_(
-				"PPh 21 for the {0} scheme is not supported yet — only permanent employees "
-				"(pegawai tetap) are calculated. Clear the PPh 21 component for this employee, or "
-				"compute it by hand."
+				"PPh 21 for the {0} scheme is not supported yet — permanent (pegawai tetap) and "
+				"non-permanent (pegawai tidak tetap) employees are calculated. Clear the PPh 21 "
+				"component for this employee, or compute it by hand."
 			).format(scheme),
 			title=_("PPh 21 scheme not supported"),
 		)
@@ -132,6 +176,14 @@ def _biaya_jabatan(gross, months, settings):
 	percent = flt(settings.biaya_jabatan_percent) or 5.0
 	monthly_cap = flt(settings.biaya_jabatan_monthly_cap) or 500_000.0
 	return min(flt(gross) * percent / 100.0, monthly_cap * months)
+
+
+def _daily_threshold(on_date=None):
+	"""Top of the TER Harian table — above it a different rule applies."""
+	rows = tables.daily_bands(on_date)
+	if not rows or not flt(rows[-1].to_amount):
+		frappe.throw(_("The TER Harian table has no upper bound; PPh 21 cannot be calculated daily."))
+	return flt(rows[-1].to_amount)
 
 
 def _months(months_worked):
