@@ -590,7 +590,11 @@ def account_options():
 def get_invoice_govt_charges(sales_invoice):
 	"""The invoice's government charges plus what the UI needs to decide whether
 	they may still be edited."""
-	from erpbio_indonesia_localization.doc_events.sales_invoice import govt_notes
+	from erpbio_indonesia_localization.doc_events.sales_invoice import (
+		PPN_TREATMENT,
+		dpp_base_for,
+		govt_notes,
+	)
 
 	if not sales_invoice or not frappe.db.exists("Sales Invoice", sales_invoice):
 		return None
@@ -612,6 +616,10 @@ def get_invoice_govt_charges(sales_invoice):
 		"docstatus": doc.docstatus,
 		"net_total": flt(doc.base_net_total),
 		"grand_total": flt(doc.base_grand_total),
+		# The two bases a rate can apply to, so the panel previews the figure the
+		# server will actually save. See dpp_base_for().
+		"vat_base": flt(dpp_base_for(doc, PPN_TREATMENT)),
+		"billed_base": flt(dpp_base_for(doc, None)),
 		"outstanding": flt(doc.outstanding_amount),
 		"can_edit": not blocker and frappe.has_permission("Sales Invoice", "write", sales_invoice),
 		"blocked_reason": blocker,
@@ -695,8 +703,8 @@ def update_invoice_govt_charges(sales_invoice, charges):
 	was_pemungut = cint(doc.get("eil_is_pemungut"))
 	doc.eil_is_pemungut = 1 if rows else 0
 	from erpbio_indonesia_localization.doc_events.sales_invoice import (
-		_dpp_base,
 		apply_treatment_rules,
+		dpp_base_for,
 		restore_output_vat,
 	)
 
@@ -715,13 +723,13 @@ def update_invoice_govt_charges(sales_invoice, charges):
 
 	# Saving a SUBMITTED invoice does not re-run the validate hook, so this path
 	# has to apply the invoice's own rules itself rather than rely on them.
-	base = _dpp_base(doc)
 	doc.set("eil_govt_charges", [])
 	for r in rows:
 		if not r.get("account"):
 			continue
 		amount = flt(r.get("amount"))
 		rate = flt(r.get("rate"))
+		base = dpp_base_for(doc, r.get("treatment") or "PPN Dipungut Pemungut")
 		# Same rule as the invoice hook: a rate recomputes the amount, a blank rate
 		# keeps the figure that was typed (which is how an actual bukti potong is
 		# entered when it differs from the standard rate).
