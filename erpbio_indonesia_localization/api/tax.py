@@ -46,6 +46,11 @@ def get_context():
 		"number_format": frappe.db.get_single_value("System Settings", "number_format") or "#.###,##",
 		"float_precision": frappe.db.get_single_value("System Settings", "float_precision") or 2,
 		"currency": (frappe.get_cached_value("Company", company, "default_currency") if company else "IDR"),
+		# For the sidebar account menu (avatar + name). Rides this existing call
+		# rather than adding a round-trip at boot.
+		"user": frappe.db.get_value(
+			"User", frappe.session.user, ["name", "full_name", "user_image"], as_dict=True
+		),
 	}
 
 
@@ -939,3 +944,45 @@ def mark_notifications_read(names=None):
 	for n in frappe.get_all("Notification Log", filters=filters, pluck="name"):
 		frappe.db.set_value("Notification Log", n, "read", 1, update_modified=False)
 	return {"ok": True}
+
+
+# ------------------------------------------------------------------- language
+# Ported from erpbio_general.api.i18n rather than called, for the same reason as
+# the notification endpoints: the mechanism is pure core (an enabled Language
+# record + User.language, which frappe/translate.py::get_user_lang reads), so
+# this app can offer the switch without depending on that app being installed.
+# The preference follows the user everywhere they sign in, Desk included.
+SUPPORTED_LANGUAGES = ("en", "id")
+
+
+@frappe.whitelist()
+def get_languages():
+	"""What the switcher offers, in UI order — skipping any not enabled on the
+	site, so we never offer a language with no catalog."""
+	rows = frappe.get_all(
+		"Language",
+		filters={"name": ("in", SUPPORTED_LANGUAGES), "enabled": 1},
+		fields=["name", "language_name"],
+	)
+	by_name = {r.name: r.language_name for r in rows}
+	return [{"value": code, "label": by_name[code]} for code in SUPPORTED_LANGUAGES if code in by_name]
+
+
+@frappe.whitelist(methods=["POST"])
+def set_language(lang):
+	"""Set the session user's UI language. The caller must reload afterwards —
+	the catalog is baked into the server-rendered boot.
+
+	Whitelisted because a plain user cannot write User.language themselves (that
+	needs System Manager); this is scoped to frappe.session.user, so it only ever
+	changes the caller's own preference.
+	"""
+	lang = (lang or "").strip()
+	if not frappe.db.exists("Language", {"name": lang, "enabled": 1}):
+		frappe.throw(_("{0} is not an enabled language.").format(frappe.bold(lang or "?")))
+	# set_value, not get_doc().save(): User.on_update reacts to a language change
+	# by overwriting the user's date_format/time_format/number_format defaults from
+	# the Language record. Those are empty on the records shipped today, but a value
+	# added there later would silently change how every amount renders.
+	frappe.db.set_value("User", frappe.session.user, "language", lang)
+	return {"lang": lang}

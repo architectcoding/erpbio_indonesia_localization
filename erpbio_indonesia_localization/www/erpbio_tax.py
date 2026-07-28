@@ -31,6 +31,7 @@ def get_boot():
 			"default_route": "/erpbio-tax",
 			"socketio_port": frappe.conf.socketio_port,
 			"app_title": "ERPbio Tax",
+			"app_version": _app_version(),
 		}
 	)
 	bootinfo.lang = str(frappe.local.lang)
@@ -39,3 +40,13 @@ def get_boot():
 	# the template JSON-encodes this dict, so coerce back to str.
 	bootinfo.lang = str(bootinfo.lang)
 	return bootinfo
+
+
+def _app_version():
+	"""Shown in the sidebar's About dialog."""
+	try:
+		from erpbio_indonesia_localization import __version__
+
+		return __version__
+	except Exception:
+		return ""

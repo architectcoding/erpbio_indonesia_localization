@@ -603,3 +603,39 @@ msgstr "{0} menit lalu"
 
 msgid "{0}h ago"
 msgstr "{0} jam lalu"
+
+msgid "Switch to Desk"
+msgstr "Beralih ke Desk"
+
+msgid "Log out"
+msgstr "Keluar"
+
+msgid "About"
+msgstr "Tentang"
+
+msgid "Language"
+msgstr "Bahasa"
+
+msgid "Could not load languages."
+msgstr "Tidak dapat memuat daftar bahasa."
+
+msgid "Could not change the language."
+msgstr "Tidak dapat mengubah bahasa."
+
+msgid "The page reloads to apply the language. It also applies in Desk."
+msgstr "Halaman dimuat ulang untuk menerapkan bahasa. Berlaku juga di Desk."
+
+msgid "Switch to light mode"
+msgstr "Beralih ke mode terang"
+
+msgid "Switch to dark mode"
+msgstr "Beralih ke mode gelap"
+
+msgid "Version {0}"
+msgstr "Versi {0}"
+
+msgid "Powered by ERPbio · Frappe / ERPNext"
+msgstr "Didukung oleh ERPbio · Frappe / ERPNext"
+
+msgid "{0} is not an enabled language."
+msgstr "{0} bukan bahasa yang diaktifkan."

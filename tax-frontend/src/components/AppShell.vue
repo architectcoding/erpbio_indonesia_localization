@@ -18,17 +18,7 @@
 					</RouterLink>
 				</template>
 			</nav>
-			<div class="flex items-center gap-1 border-t p-2">
-				<button class="flex min-w-0 flex-1 items-center gap-2.5 rounded px-2 py-1.5 text-sm text-ink-gray-6 hover:bg-surface-gray-1" @click="session.logout()">
-					<FeatherIcon name="log-out" class="h-4 w-4 shrink-0" />
-					{{ __("Log Out") }} <span class="ml-auto truncate text-[11px] text-ink-gray-4">{{ session.user }}</span>
-				</button>
-				<button class="shrink-0 rounded p-1.5 text-ink-gray-5 hover:bg-surface-gray-2 hover:text-ink-gray-8"
-					:title="theme === 'dark' ? __('Switch to light mode') : __('Switch to dark mode')"
-					@click="toggleTheme">
-					<FeatherIcon :name="theme === 'dark' ? 'sun' : 'moon'" class="h-4 w-4" />
-				</button>
-			</div>
+			<SidebarUserFooter />
 		</aside>
 
 		<!-- content -->
@@ -44,14 +34,12 @@
 <script setup>
 import { inject } from "vue"
 import { RouterLink, useRoute } from "vue-router"
-import { useTheme } from "@/composables/useTheme"
 import DocPreviewHost from "@/components/DocPreviewHost.vue"
 import NotificationsBell from "@/components/NotificationsBell.vue"
+import SidebarUserFooter from "@/components/SidebarUserFooter.vue"
 
-const session = inject("$session")
 const __ = inject("$translate")
 const route = useRoute()
-const { theme, toggleTheme } = useTheme()
 
 const NAV = [
 	{

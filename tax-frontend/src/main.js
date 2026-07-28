@@ -49,19 +49,30 @@ router.isReady().then(async () => {
 
 	// Amounts should read the way Desk renders them (1.234.567,89 on an
 	// Indonesian site), so pick the site's format up before the first render.
-	// Rides the shell's existing context call rather than adding a round-trip.
+	// Rides the shell's existing context call rather than adding a round-trip —
+	// which also carries the signed-in user for the sidebar account menu.
+	let ctx = null
 	if (session.isLoggedIn) {
-		await frappeRequest({ url: "/api/method/erpbio_indonesia_localization.api.tax.get_context" })
-			.then((ctx) =>
-				setNumberFormat({
-					number_format: ctx?.number_format,
-					currency: ctx?.currency,
-					precision: ctx?.float_precision,
-				})
-			)
-			.catch(() => {})
+		ctx = await frappeRequest({
+			url: "/api/method/erpbio_indonesia_localization.api.tax.get_context",
+		}).catch(() => null)
+		if (ctx) {
+			setNumberFormat({
+				number_format: ctx.number_format,
+				currency: ctx.currency,
+				precision: ctx.float_precision,
+			})
+		}
 	}
 
 	document.title = window.frappe?.boot?.app_title || "ERPbio Tax"
+	// Provided before mount so the footer renders the right name on first paint
+	// rather than flashing the email.
+	app.provide("$user", ctx?.user || null)
+	// Translated, so About matches the sidebar heading (which renders __()).
+	app.provide("$branding", {
+		title: translate(window.frappe?.boot?.app_title || "ERPbio Tax"),
+		logo: window.frappe?.boot?.app_logo || "",
+	})
 	app.mount("#app")
 })
