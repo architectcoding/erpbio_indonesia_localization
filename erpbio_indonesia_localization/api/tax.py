@@ -74,6 +74,20 @@ def list_exports(txt=None, filters=None, order_by=None, start=0, page_length=20)
 def get_export(name):
 	_check("Coretax Faktur Export")
 	doc = frappe.get_doc("Coretax Faktur Export", name)
+	# The stored grand_total is the invoice's OWN currency total (si.grand_total,
+	# not base), so the frontend needs each row's currency or a foreign-currency
+	# invoice gets labelled with the company's — a USD 1,200 reading "IDR 1.200".
+	# Derived here rather than stored: it's the invoice's own field, always current.
+	names = [r.sales_invoice for r in doc.invoices if r.sales_invoice]
+	currencies = (
+		dict(
+			frappe.get_all(
+				"Sales Invoice", filters={"name": ["in", names]}, fields=["name", "currency"], as_list=True
+			)
+		)
+		if names
+		else {}
+	)
 	return {
 		"doc": {
 			"name": doc.name,
@@ -91,6 +105,7 @@ def get_export(name):
 				"customer": r.customer,
 				"posting_date": r.posting_date,
 				"grand_total": flt(r.grand_total),
+				"currency": currencies.get(r.sales_invoice),
 				"kode_transaksi": r.kode_transaksi,
 				"ok": r.ok,
 				"message": r.message,

@@ -59,7 +59,7 @@
 						<td class="max-w-[16rem] truncate px-3 py-2 text-ink-gray-7"
 							v-doc-preview="row.customer ? { doctype: 'Customer', name: row.customer } : undefined">{{ row.customer }}</td>
 						<td class="px-3 py-2 text-ink-gray-7">{{ row.posting_date }}</td>
-						<td class="px-3 py-2 text-right tabular-nums text-ink-gray-7">{{ money(row.grand_total) }}</td>
+						<td class="px-3 py-2 text-right tabular-nums text-ink-gray-7">{{ money(row.grand_total, row.currency) }}</td>
 						<td class="px-3 py-2 text-ink-gray-7">{{ row.kode_transaksi }}</td>
 						<td class="px-3 py-2">
 							<span :class="row.ok ? 'text-ink-green-3' : 'text-ink-red-3'">{{ row.message }}</span>
@@ -82,6 +82,7 @@
 import { computed, inject, ref } from "vue"
 import { RouterLink } from "vue-router"
 import { call } from "frappe-ui"
+import { formatCurrency } from "@/utils/format"
 import DocActions from "@/components/DocActions.vue"
 
 const props = defineProps({ name: { type: String, required: true } })
@@ -107,8 +108,10 @@ const shareText = computed(() => {
 	].filter(Boolean).join("\n")
 })
 
-function money(v) {
-	return new Intl.NumberFormat("id-ID").format(v || 0)
+// Per-row currency: the stored total is the invoice's own, not the base amount,
+// so a USD invoice must not be labelled with the company currency.
+function money(v, currency) {
+	return formatCurrency(v ?? 0, currency)
 }
 
 async function load() {

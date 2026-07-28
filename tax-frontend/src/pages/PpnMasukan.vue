@@ -87,6 +87,7 @@
 import DatePickerPopover from "@/components/DatePickerPopover.vue"
 import { computed, inject, ref } from "vue"
 import { call } from "frappe-ui"
+import { formatCurrency } from "@/utils/format"
 
 const __ = inject("$translate")
 
@@ -106,7 +107,7 @@ function monthStart() {
 	return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10)
 }
 function money(v) {
-	return new Intl.NumberFormat("id-ID").format(v || 0)
+	return formatCurrency(v ?? 0)
 }
 function total(field) {
 	return rows.value.reduce((a, r) => a + (Number(r[field]) || 0), 0)

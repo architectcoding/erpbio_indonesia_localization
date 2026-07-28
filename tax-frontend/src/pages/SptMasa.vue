@@ -61,6 +61,7 @@
 import { inject, ref } from "vue"
 import { RouterLink } from "vue-router"
 import { call } from "frappe-ui"
+import { formatCurrency } from "@/utils/format"
 
 const __ = inject("$translate")
 
@@ -72,7 +73,7 @@ const loading = ref(false)
 const errorMessage = ref("")
 
 function money(v) {
-	return new Intl.NumberFormat("id-ID").format(v || 0)
+	return formatCurrency(v ?? 0)
 }
 
 call("erpbio_indonesia_localization.api.tax.get_context").then((ctx) => {
