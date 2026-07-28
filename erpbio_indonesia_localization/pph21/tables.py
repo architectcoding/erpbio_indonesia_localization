@@ -39,6 +39,34 @@ def ter_category(status, on_date=None):
 	return _ptkp_row(status, on_date).ter_category
 
 
+def ter_category_or_none(status, on_date=None):
+	"""The TER category, or None when the tables cannot answer.
+
+	For display only. frappe.throw queues its message even when the exception is
+	caught, so it must be cleared too — otherwise a page that merely *shows* a
+	category reports "rate tables have not been verified" as if the user's action
+	failed, which is how this masked a real error.
+	"""
+	if not status:
+		return None
+	try:
+		return ter_category(status, on_date)
+	except Exception:
+		frappe.clear_last_message()
+		return None
+
+
+def ptkp_annual_or_none(status, on_date=None):
+	"""Annual PTKP, or None when the tables cannot answer. See above."""
+	if not status:
+		return None
+	try:
+		return ptkp_annual(status, on_date)
+	except Exception:
+		frappe.clear_last_message()
+		return None
+
+
 def pasal17_tax(taxable_income, on_date=None):
 	"""Annual tax from the Pasal 17 ayat (1) huruf a progressive brackets.
 

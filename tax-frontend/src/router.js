@@ -19,6 +19,13 @@ const routes = [
 		props: true,
 	},
 	{ path: "/pph21/tables", name: "Pph21Tables", component: () => import("@/pages/Pph21Tables.vue") },
+	{ path: "/pph21/employees", name: "EmployeePph21List", component: () => import("@/pages/EmployeePph21List.vue") },
+	{
+		path: "/pph21/employees/:name",
+		name: "EmployeePph21Detail",
+		component: () => import("@/pages/EmployeePph21Detail.vue"),
+		props: true,
+	},
 	{ path: "/customers", name: "CustomerList", component: () => import("@/pages/CustomerList.vue") },
 	{
 		path: "/customers/:name",

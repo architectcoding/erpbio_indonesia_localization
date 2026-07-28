@@ -1260,3 +1260,168 @@ def set_pph21_tables_verified(verified):
 	frappe.db.set_single_value("EIL PPh 21 Settings", "tables_verified", verified)
 	frappe.clear_cache(doctype="EIL PPh 21 Settings")
 	return {"tables_verified": verified}
+
+
+# ------------------------------------------------------- PPh 21 employee setup
+# PPh 21 refuses to calculate for an employee with no PTKP status, and throws for
+# any scheme but Permanent. Both are invisible until a payroll run hits them, so
+# this is the same idea as the buyer readiness list: show the backlog before it
+# becomes a blocked payroll.
+EMPLOYEE_PPH21_FIELDS = (
+	"name",
+	"employee_name",
+	"company",
+	"department",
+	"designation",
+	"status",
+	"eil_ptkp_status",
+	"eil_ter_category",
+	"eil_pph21_scheme",
+	"eil_npwp",
+	"eil_nik",
+)
+EMPLOYEE_TAX_FIELDS = ("eil_ptkp_status", "eil_pph21_scheme", "eil_npwp", "eil_nik")
+EMPLOYEE_FILTER_FIELDS = {"name", "employee_name", "company", "department", "status",
+                          "eil_ptkp_status", "eil_pph21_scheme"}
+EMPLOYEE_ORDER_FIELDS = {"name", "employee_name", "company", "department", "status", "modified"}
+
+
+def _live_ter_category(status):
+	"""Derive the TER category now rather than trusting the stored field.
+
+	The stored one is written on save, so it stays blank on every employee saved
+	before the rate tables were verified. The calculation never reads it — it asks
+	the tables directly — so only the display would be wrong, which is exactly the
+	kind of discrepancy that makes people distrust the whole page.
+	"""
+	from erpbio_indonesia_localization.pph21 import tables as pph21_tables
+
+	return pph21_tables.ter_category_or_none(status)
+
+
+def _employee_pph21_status(row):
+	scheme = row.get("eil_pph21_scheme") or "Permanent"
+	if scheme != "Permanent":
+		return "Unsupported", _("The {0} scheme is not calculated yet").format(scheme)
+	if not row.get("eil_ptkp_status"):
+		return "Blocked", _("No PTKP status — PPh 21 cannot be calculated")
+	return "Ready", _("Ready")
+
+
+def _employees_in_scope(names):
+	"""Which of these employees are actually on a salary structure that carries
+	the PPh 21 component. Someone with no PTKP status but no PPh 21 on their
+	structure is not holding anything up."""
+	component = frappe.db.get_single_value("EIL PPh 21 Settings", "pph21_component")
+	if not component or not names:
+		return set()
+	structures = frappe.get_all(
+		"Salary Detail",
+		filters={"parenttype": "Salary Structure", "parentfield": "deductions",
+		         "salary_component": component},
+		pluck="parent",
+	)
+	if not structures:
+		return set()
+	return set(
+		frappe.get_all(
+			"Salary Structure Assignment",
+			filters={"employee": ("in", names), "salary_structure": ("in", structures), "docstatus": 1},
+			pluck="employee",
+		)
+	)
+
+
+@frappe.whitelist()
+def list_employees_pph21(txt=None, filters=None, order_by=None, start=0, page_length=20):
+	_check("Employee")
+	flt_list = to_getlist_filters(filters, EMPLOYEE_FILTER_FIELDS)
+	or_filters = {"name": ["like", f"%{txt}%"], "employee_name": ["like", f"%{txt}%"]} if txt else None
+	rows = frappe.get_all(
+		"Employee",
+		filters=flt_list,
+		or_filters=or_filters,
+		fields=list(EMPLOYEE_PPH21_FIELDS),
+		order_by=resolve_order_by(order_by, EMPLOYEE_ORDER_FIELDS, "employee_name asc"),
+		start=int(start),
+		page_length=int(page_length),
+	)
+	in_scope = _employees_in_scope([r["name"] for r in rows])
+	for r in rows:
+		r["pph21_status"], r["pph21_message"] = _employee_pph21_status(r)
+		r["in_scope"] = r["name"] in in_scope
+		r["eil_ter_category"] = _live_ter_category(r.get("eil_ptkp_status")) or r.get("eil_ter_category")
+	total = capped_total("Employee", filters=flt_list, or_filters=or_filters)
+	return {
+		"items": rows,
+		"total": total,
+		"has_next": int(start) + len(rows) < total,
+		"meta": {"can_write": frappe.has_permission("Employee", "write")},
+	}
+
+
+@frappe.whitelist()
+def employee_pph21_summary(filters=None):
+	_check("Employee")
+	flt_list = to_getlist_filters(filters, EMPLOYEE_FILTER_FIELDS)
+	rows = frappe.get_all("Employee", filters=flt_list, fields=list(EMPLOYEE_PPH21_FIELDS))
+	in_scope = _employees_in_scope([r["name"] for r in rows])
+	out = {"total": len(rows), "Ready": 0, "Blocked": 0, "Unsupported": 0, "in_scope": 0,
+	       "blocked_in_scope": 0}
+	for r in rows:
+		status, _msg = _employee_pph21_status(r)
+		out[status] += 1
+		if r["name"] in in_scope:
+			out["in_scope"] += 1
+			if status != "Ready":
+				# The ones that will actually stop a payroll run.
+				out["blocked_in_scope"] += 1
+	return out
+
+
+@frappe.whitelist()
+def get_employee_pph21(name):
+	_check("Employee")
+	row = frappe.db.get_value("Employee", name, list(EMPLOYEE_PPH21_FIELDS), as_dict=True)
+	if not row:
+		frappe.throw(_("Employee {0} not found.").format(name))
+	status, message = _employee_pph21_status(row)
+	row["eil_ter_category"] = _live_ter_category(row.get("eil_ptkp_status")) or row.get("eil_ter_category")
+	from erpbio_indonesia_localization.pph21 import tables as pph21_tables
+
+	# None when the tables are unverified or unloaded; the page says so rather
+	# than pretending the employee is misconfigured.
+	ptkp = pph21_tables.ptkp_annual_or_none(row.get("eil_ptkp_status"))
+	return {
+		"doc": row,
+		"pph21_status": status,
+		"pph21_message": message,
+		"ptkp_annual": ptkp,
+		"in_scope": row["name"] in _employees_in_scope([row["name"]]),
+		"can_write": frappe.has_permission("Employee", "write", doc=name),
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+def save_employee_pph21(payload):
+	"""Write only the PPh 21 identity fields.
+
+	Employee write is an HR permission and stays one — nothing here bypasses it.
+	Salary, personal and contract data are never touched.
+	"""
+	payload = frappe.parse_json(payload)
+	name = payload.get("name")
+	if not name:
+		frappe.throw(_("Employee is required."))
+	_check("Employee", "write")
+	doc = frappe.get_doc("Employee", name)
+	for field in EMPLOYEE_TAX_FIELDS:
+		if field in payload:
+			doc.set(field, payload[field])
+	# Existing records often have unrelated HR gaps (no gender, no date of birth).
+	# Those are HR's to fill, and blocking a PTKP status on them would just push
+	# the tax user back to Desk to fix data that is none of their business. Only
+	# the mandatory *check* is skipped; every other validation still runs.
+	doc.flags.ignore_mandatory = True
+	doc.save()
+	return get_employee_pph21(name)

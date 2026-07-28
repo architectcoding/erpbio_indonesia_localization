@@ -876,3 +876,90 @@ msgstr "Verifikasi dicabut. PPh 21 akan menolak menghitung."
 
 msgid "The statutory tables PPh 21 is calculated from. They were extracted from the regulation rather than typed in, but a person still has to confirm them before anything is withheld."
 msgstr "Tabel resmi yang menjadi dasar perhitungan PPh 21. Diambil langsung dari peraturan, bukan diketik ulang, tetapi tetap harus dikonfirmasi seseorang sebelum ada pemotongan."
+
+msgid "Employees"
+msgstr "Karyawan"
+
+msgid "employees"
+msgstr "karyawan"
+
+msgid "Employee"
+msgstr "Karyawan"
+
+msgid "Scheme"
+msgstr "Skema"
+
+msgid "PTKP Status"
+msgstr "Status PTKP"
+
+msgid "Not set"
+msgstr "Belum diisi"
+
+msgid "Employee Status"
+msgstr "Status Karyawan"
+
+msgid "Department"
+msgstr "Departemen"
+
+msgid "On structure"
+msgstr "Pada struktur"
+
+msgid "On a PPh 21 structure"
+msgstr "Pada struktur PPh 21"
+
+msgid "No PTKP status"
+msgstr "Tanpa status PTKP"
+
+msgid "{0} would block payroll"
+msgstr "{0} akan menghambat penggajian"
+
+msgid "{0} without PTKP status"
+msgstr "{0} tanpa status PTKP"
+
+msgid "{0} of {1} on a PPh 21 structure"
+msgstr "{0} dari {1} pada struktur PPh 21"
+
+msgid "Unsupported"
+msgstr "Belum didukung"
+
+msgid "Marital status and dependants at the start of the tax year. TK = tidak kawin, K = kawin."
+msgstr "Status perkawinan dan tanggungan pada awal tahun pajak. TK = tidak kawin, K = kawin."
+
+msgid "Only Permanent (pegawai tetap) is calculated today."
+msgstr "Saat ini hanya Permanent (pegawai tetap) yang dihitung."
+
+msgid "What this resolves to"
+msgstr "Hasil dari pilihan ini"
+
+msgid "Saved values, from the loaded rate tables."
+msgstr "Nilai tersimpan, dari tabel tarif yang dimuat."
+
+msgid "TER Category"
+msgstr "Kategori TER"
+
+msgid "Annual PTKP"
+msgstr "PTKP Setahun"
+
+msgid "rate tables not verified"
+msgstr "tabel tarif belum diverifikasi"
+
+msgid "Not urgent: this employee is not on a salary structure that carries PPh 21."
+msgstr "Tidak mendesak: karyawan ini tidak berada pada struktur gaji yang memuat PPh 21."
+
+msgid "You can view this employee's tax identity but not change it — editing an Employee is an HR permission. Ask HR to set the PTKP status, or open it in Desk if you have the role."
+msgstr "Anda dapat melihat identitas pajak karyawan ini tetapi tidak dapat mengubahnya — mengubah data Karyawan adalah hak akses HR. Minta HR mengisi status PTKP, atau buka di Desk jika Anda memiliki perannya."
+
+msgid "Could not load this employee."
+msgstr "Tidak dapat memuat karyawan ini."
+
+msgid "Employee {0} not found."
+msgstr "Karyawan {0} tidak ditemukan."
+
+msgid "Employee is required."
+msgstr "Karyawan wajib diisi."
+
+msgid "No PTKP status — PPh 21 cannot be calculated"
+msgstr "Tanpa status PTKP — PPh 21 tidak dapat dihitung"
+
+msgid "The {0} scheme is not calculated yet"
+msgstr "Skema {0} belum dihitung"

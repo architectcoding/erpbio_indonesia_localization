@@ -63,7 +63,10 @@ const NAV = [
 	},
 	{
 		label: "PPh 21",
-		items: [{ label: "Rate Tables", route: "Pph21Tables", icon: "percent", match: "/pph21" }],
+		items: [
+			{ label: "Employees", route: "EmployeePph21List", icon: "users", match: "/pph21/employees" },
+			{ label: "Rate Tables", route: "Pph21Tables", icon: "percent", match: "/pph21/tables" },
+		],
 	},
 	{
 		label: "Setup",
