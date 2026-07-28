@@ -41,6 +41,11 @@ doc_events = {
 		# honest with each other. See doc_events/sales_taxes_and_charges_template.py.
 		"validate": "erpbio_indonesia_localization.doc_events.sales_taxes_and_charges_template.validate",
 	},
+	"Employee": {
+		# Keep the derived TER category in step with the PTKP status, so it is
+		# visible on the form and usable in reports without recomputing.
+		"validate": "erpbio_indonesia_localization.doc_events.employee.validate",
+	},
 	"Sales Invoice": {
 		# WAPU/Bendahara: keep government-collected tax rows out of the invoice
 		# totals, then carve them out of the receivable with their own entry.
@@ -49,6 +54,15 @@ doc_events = {
 		"validate": "erpbio_indonesia_localization.doc_events.sales_invoice.validate",
 		"on_submit": "erpbio_indonesia_localization.doc_events.sales_invoice.on_submit",
 		"on_cancel": "erpbio_indonesia_localization.doc_events.sales_invoice.on_cancel",
+	},
+}
+
+# PPh 21 (employee income tax) hooks into HRMS's regional extension point, which
+# runs inside calculate_net_pay() before the totals are finalised. Scoped to an
+# Indonesian company by HRMS's own region lookup, so it can never fire elsewhere.
+regional_overrides = {
+	"Indonesia": {
+		"hrms.payroll.doctype.salary_slip.salary_slip.apply_regional_deductions": "erpbio_indonesia_localization.pph21.salary_slip.apply_pph21_deduction",
 	},
 }
 

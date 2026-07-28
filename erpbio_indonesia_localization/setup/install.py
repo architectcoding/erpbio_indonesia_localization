@@ -331,6 +331,77 @@ CUSTOM_FIELDS = {
 			"description": "Applied instead of the output VAT above when the buyer is a government treasurer (pemungut/WAPU). The PPN row should carry the same rate as the output-VAT row in this template. Other charges here — freight, handling — are unaffected and still apply.",
 		},
 	],
+	# ---------------------------------------------------------------- PPh 21
+	# Employee income tax. The employee carries the identity the calculation needs;
+	# the salary component carries how each pay element is treated.
+	"Employee": [
+		{
+			"fieldname": "eil_pph21_section",
+			"label": "Indonesia Tax (PPh 21)",
+			"fieldtype": "Section Break",
+			"insert_after": "salary_mode",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "eil_ptkp_status",
+			"label": "PTKP Status",
+			"fieldtype": "Select",
+			"options": "\nTK/0\nTK/1\nTK/2\nTK/3\nK/0\nK/1\nK/2\nK/3",
+			"insert_after": "eil_pph21_section",
+			"description": "Marital status and dependants at the start of the tax year. "
+			"TK = tidak kawin, K = kawin; the digit is the number of dependants. "
+			"Decides both the PTKP allowance and the TER category.",
+		},
+		{
+			"fieldname": "eil_ter_category",
+			"label": "TER Category",
+			"fieldtype": "Data",
+			"read_only": 1,
+			"insert_after": "eil_ptkp_status",
+			"description": "Derived from the PTKP status, as PMK 168 maps it.",
+		},
+		{
+			"fieldname": "eil_pph21_scheme",
+			"label": "PPh 21 Scheme",
+			"fieldtype": "Select",
+			"options": "Permanent\nNon-permanent\nExpatriate\nPensioner",
+			"default": "Permanent",
+			"insert_after": "eil_ter_category",
+			"description": "Only Permanent (pegawai tetap) is calculated today; the others "
+			"throw rather than borrow the wrong scheme's arithmetic.",
+		},
+		{
+			"fieldname": "eil_pph21_col",
+			"fieldtype": "Column Break",
+			"insert_after": "eil_pph21_scheme",
+		},
+		{
+			"fieldname": "eil_npwp",
+			"label": "NPWP",
+			"fieldtype": "Data",
+			"insert_after": "eil_pph21_col",
+		},
+		{
+			"fieldname": "eil_nik",
+			"label": "NIK",
+			"fieldtype": "Data",
+			"insert_after": "eil_npwp",
+			"description": "Now serves as the NPWP for individuals.",
+		},
+	],
+	"Salary Component": [
+		{
+			"fieldname": "eil_pph21_treatment",
+			"label": "PPh 21 Treatment",
+			"fieldtype": "Select",
+			"options": "\nTeratur\nTidak Teratur\nNatura\nPremi Pemberi Kerja\nIuran Pensiun\nZakat\nExcluded",
+			"insert_after": "statistical_component",
+			"description": "How the annual calculation treats this component. Teratur = regular pay; "
+			"Tidak Teratur = bonus, THR, tantiem, gratifikasi; Natura = benefits in kind; "
+			"Iuran Pensiun and Zakat are deductions; Excluded is left out entirely. "
+			"Blank means earnings count as Teratur and deductions are ignored.",
+		},
+	],
 }
 
 # The nine standard DJP transaction codes. Stable since the e-Faktur era and
@@ -367,6 +438,38 @@ def seed_pph21_rates():
 	from erpbio_indonesia_localization.pph21.rates_loader import load_rates
 
 	load_rates()
+	seed_pph21_component()
+
+
+def seed_pph21_component():
+	"""The deduction row this app writes.
+
+	Deliberately NOT flagged variable_based_on_taxable_salary: that hands the
+	calculation to HRMS's annualised slab engine, which cannot express TER. It is
+	also not prorated for unpaid days — a month's tax follows that month's gross,
+	which already reflects any unpaid days.
+	"""
+	if not frappe.db.exists("DocType", "Salary Component"):
+		return
+	if not frappe.db.exists("Salary Component", "PPh 21"):
+		frappe.get_doc(
+			{
+				"doctype": "Salary Component",
+				"salary_component": "PPh 21",
+				"salary_component_abbr": "PPh21",
+				"type": "Deduction",
+				"depends_on_payment_days": 0,
+				"variable_based_on_taxable_salary": 0,
+				"description": "Employee income tax withheld under PP 58/2023. The amount is "
+				"computed by erpbio_indonesia_localization; do not set a formula.",
+			}
+		).insert(ignore_permissions=True)
+
+	settings = frappe.get_single("EIL PPh 21 Settings")
+	if not settings.pph21_component and frappe.db.exists("Salary Component", "PPh 21"):
+		settings.pph21_component = "PPh 21"
+		settings.flags.ignore_permissions = True
+		settings.save()
 
 
 def seed_transaction_codes():
