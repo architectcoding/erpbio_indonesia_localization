@@ -60,10 +60,11 @@
   },
   {
    "fieldname": "message",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "in_list_view": 1,
    "label": "Validation",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Small Text, not Data: an invoice can accumulate several problems (currency + missing NPWP + a PPN reconciliation gap) and the joined message ran past Data's 140 characters, which made fetch_invoices throw instead of reporting them."
   }
  ],
  "istable": 1,
