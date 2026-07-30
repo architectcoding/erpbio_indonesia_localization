@@ -11,6 +11,7 @@
 # current official template before the first real upload — DJP revises it.
 
 import io
+import math
 import re
 
 import frappe
@@ -109,10 +110,47 @@ def _num(value):
 	return text or "0"
 
 
+def _price_and_discount(dpp, qty, net_rate):
+	"""A Harga Satuan and Total Diskon that satisfy Coretax's per-line identity.
+
+	Coretax recomputes DPP = Harga Satuan x Jumlah - Total Diskon on every line
+	and rejects the upload when the three disagree. A unit price only fits in two
+	decimals when the quantity divides the discounted amount, and an
+	invoice-level discount routinely stops it doing so: three units of a
+	29,990,990.99 line price at 9,996,997.00 each, which is a rupiah more than
+	was invoiced.
+
+	Reporting the price rounded AWAY from zero and carrying the remainder as the
+	discount is how the official template is filled in by hand. Rounding that way
+	round is what keeps the remainder non-negative — DJP has no meaning for a
+	negative Total Diskon. Where the division is already exact the discount comes
+	out at zero, so an ordinary line is untouched.
+	"""
+	if not qty:
+		return net_rate, 0
+	# In hundredths, so the rounding is a plain integer step. Damping to six
+	# decimals first stops a value that is exactly representable in rupiah from
+	# being pushed up a hundredth by float noise.
+	units = flt(dpp / qty / 0.01, 6)
+	price = flt((math.ceil(units) if qty > 0 else math.floor(units)) * 0.01, 2)
+	return price, flt(price * qty - dpp, 2)
+
+
 class CoretaxFakturExport(Document):
 	def validate(self):
 		if getdate(self.from_date) > getdate(self.to_date):
 			frappe.throw(_("From Date cannot be after To Date."))
+		self.refresh_seller_npwp()
+
+	def refresh_seller_npwp(self):
+		"""Re-read the company's NPWP onto the export.
+
+		Called from validate AND from the top of fetch_invoices. Only validate
+		would be too late: fetch judges every invoice and then saves, so the
+		checks ran against whatever NPWP the export was created with. On a
+		company with none — which is the state this site is in — the accountant
+		is told "Company Tax ID (NPWP) is empty" against every invoice, fills it
+		in, fetches again, and is told exactly the same thing."""
 		self.npwp_penjual = _digits(frappe.db.get_value("Company", self.company, "tax_id"))
 
 	# ------------------------------------------------------------------ fetch
@@ -120,6 +158,7 @@ class CoretaxFakturExport(Document):
 	def fetch_invoices(self):
 		"""Fill the table with the period's exportable Sales Invoices, each
 		validated so problems are visible before anything is generated."""
+		self.refresh_seller_npwp()
 		self.set("invoices", [])
 		invoices = frappe.get_all(
 			"Sales Invoice",
@@ -309,6 +348,8 @@ class CoretaxFakturExport(Document):
 		dpp = flt(item.net_amount, 2)
 		dpp_lain = flt(dpp * num / den, 2) if settings.use_dpp_nilai_lain else dpp
 		charge = item.get("_charge_account")
+		qty = flt(item.qty, 2)
+		price, discount = _price_and_discount(dpp, qty, flt(item.net_rate, 2))
 		return {
 			"opt": (item.get("_barang_jasa") or "B - Jasa")[0] if charge else self._barang_jasa(item),
 			"code": (item.get("_goods_code") or "000000")
@@ -319,9 +360,9 @@ class CoretaxFakturExport(Document):
 			),
 			"name": item.item_name or item.item_code,
 			"unit": item.get("_unit") if charge else self._resolve_unit(item),
-			"price": flt(item.net_rate, 2),
-			"qty": flt(item.qty, 2),
-			"discount": 0,
+			"price": price,
+			"qty": qty,
+			"discount": discount,
 			"dpp": dpp,
 			"dpp_lain": dpp_lain,
 			"tarif": tarif,
@@ -468,7 +509,7 @@ class CoretaxFakturExport(Document):
 				ET.SubElement(g, "Unit").text = line["unit"]
 				ET.SubElement(g, "Price").text = _num(line["price"])
 				ET.SubElement(g, "Qty").text = _num(line["qty"])
-				ET.SubElement(g, "TotalDiscount").text = "0"
+				ET.SubElement(g, "TotalDiscount").text = _num(line["discount"])
 				ET.SubElement(g, "TaxBase").text = _num(line["dpp"])
 				ET.SubElement(g, "OtherTaxBase").text = _num(line["dpp_lain"])
 				ET.SubElement(g, "VATRate").text = _num(line["tarif"])
@@ -480,8 +521,17 @@ class CoretaxFakturExport(Document):
 		return b'<?xml version="1.0" encoding="utf-8"?>\n' + ET.tostring(root, encoding="utf-8")
 
 	def _seller_idtku(self):
-		nitku = frappe.db.get_value("Company", self.company, "eil_nitku")
-		return _digits(nitku) or (self.npwp_penjual + "000000")
+		"""The company's NITKU, else its NPWP with the head-office branch suffix.
+
+		The suffix is only a sane default when there is an NPWP to append it to.
+		Concatenated onto an empty one it produces the literal string 000000 — a
+		plausible-looking tax identity belonging to nobody. The company on this
+		site has no NPWP today, so that is the value the first export would have
+		carried."""
+		nitku = _digits(frappe.db.get_value("Company", self.company, "eil_nitku"))
+		if nitku:
+			return nitku
+		return self.npwp_penjual + "000000" if self.npwp_penjual else ""
 
 	def _buyer_bits(self, si):
 		customer = frappe.db.get_value(
