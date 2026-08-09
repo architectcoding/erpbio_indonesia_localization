@@ -59,7 +59,24 @@
 				chatPos && !isMobile ? 'sm:rounded-lg sm:border-b' : 'sm:bottom-0 sm:right-4 sm:rounded-t-lg sm:border-b-0',
 			]"
 			:style="windowStyle"
+			@dragenter.prevent="onDragEnter"
+			@dragover.prevent="onDragOver"
+			@dragleave="onDragLeave"
+			@drop.prevent="onDrop"
+			@paste="onPaste"
 		>
+			<!-- Drop target covers the whole window, not just the composer: aiming
+			     at a 28px input while dragging is a needless precision test. -->
+			<!-- Solid, not bg-surface-white/90: frappe-ui's colour ramps are CSS
+			     variables, and Tailwind's /opacity modifier needs raw channel values
+			     to work on one — it silently produces no background at all, leaving
+			     the label unreadable over the messages behind it. -->
+			<div v-if="dropActive"
+				class="pointer-events-none absolute inset-0 z-20 m-1 flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-outline-gray-3 bg-surface-white">
+				<FeatherIcon name="upload-cloud" class="h-7 w-7 text-ink-gray-5" />
+				<p class="text-sm font-medium text-ink-gray-7">{{ __("Drop to attach") }}</p>
+			</div>
+
 			<!-- Header. Doubles as the drag handle — grab anywhere that isn't a
 			     button, as Odoo does. -->
 			<div
@@ -221,7 +238,17 @@
 										:class="row.own ? 'bg-surface-blue-2 text-ink-gray-9' : 'bg-surface-gray-2 text-ink-gray-8'"
 									>{{ row.body }}</div>
 
-									<a v-if="row.m.file" :href="row.m.file" target="_blank" rel="noopener"
+									<!-- An image renders as an image. It used to render as a blue
+									     filename, which reads as broken the moment you paste a
+									     screenshot in — the point of pasting is to be seen. -->
+									<button v-if="row.m.file && isImageMessage(row.m)" type="button"
+										class="mt-1 overflow-hidden rounded-lg border bg-surface-gray-1"
+										:title="__('Open image')" @click="openImage(row.m)">
+										<img :src="row.m.file_thumbnail || row.m.file" :alt="fileName(row.m.file)"
+											loading="lazy" class="max-h-48 max-w-full object-contain" />
+									</button>
+
+									<a v-else-if="row.m.file" :href="row.m.file" target="_blank" rel="noopener"
 										class="mt-1 inline-flex items-center gap-1 text-xs text-ink-blue-link hover:underline">
 										<FeatherIcon name="paperclip" class="h-3 w-3" />{{ fileName(row.m.file) }}
 									</a>
@@ -261,30 +288,53 @@
 							</button>
 						</div>
 
-						<div v-if="attachment" class="mb-1 flex items-center gap-2 rounded bg-surface-gray-2 px-2 py-1 text-xs text-ink-gray-7">
-							<FeatherIcon name="paperclip" class="h-3 w-3 shrink-0" />
-							<span class="min-w-0 flex-1 truncate">{{ attachment.name }}</span>
-							<button type="button" class="text-ink-gray-5 hover:text-ink-gray-9" @click="attachment = null">
-								<FeatherIcon name="x" class="h-3 w-3" />
-							</button>
+						<!-- Staged attachments. Images preview as images so you can tell
+						     two pasted screenshots apart before sending. -->
+						<div v-if="attachments.length" class="mb-1 flex flex-wrap gap-1">
+							<div v-for="(a, i) in attachments" :key="a.key"
+								class="group relative flex items-center gap-1 rounded border bg-surface-gray-2 py-1 pl-1 pr-5 text-xs text-ink-gray-7">
+								<img v-if="a.preview" :src="a.preview" :alt="a.file.name"
+									class="h-8 w-8 shrink-0 rounded object-cover" />
+								<FeatherIcon v-else name="file" class="h-3 w-3 shrink-0" />
+								<span class="max-w-[8rem] truncate">{{ a.file.name }}</span>
+								<button type="button"
+									class="absolute right-0.5 top-0.5 rounded text-ink-gray-5 hover:text-ink-gray-9"
+									:title="__('Remove')" @click="removeAttachment(i)">
+									<FeatherIcon name="x" class="h-3 w-3" />
+								</button>
+							</div>
 						</div>
 
 						<div v-if="sendError" class="mb-1 text-xs text-ink-red-3">{{ sendError }}</div>
 
-						<!-- One rounded row: attach on the left, send on the right, as Odoo -->
+						<!-- The picker is anchored to the composer rather than teleported:
+						     the window is already fixed-position, so it travels with it
+						     when dragged and needs no repositioning on scroll. -->
+						<div v-if="emojiOpen" ref="emojiEl" class="absolute bottom-full right-2 z-10 mb-1">
+							<EmojiPicker @select="insertEmoji" @close="emojiOpen = false" />
+						</div>
+
+						<!-- One rounded row: attach and emoji on the left, send on the
+						     right, as Odoo -->
 						<div class="flex items-end gap-1 rounded-full border bg-surface-white py-1 pl-1 pr-1">
 							<button type="button"
 								class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-gray-6 hover:bg-surface-gray-2"
-								:title="__('Attach file')" @click="$refs.fileInput.click()">
-								<FeatherIcon name="plus-circle" class="h-4 w-4" />
+								:title="__('Attach files')" @click="$refs.fileInput.click()">
+								<FeatherIcon name="paperclip" class="h-4 w-4" />
 							</button>
-							<input ref="fileInput" type="file" class="hidden" @change="onFilePicked" />
+							<input ref="fileInput" type="file" multiple class="hidden" @change="onFilePicked" />
+							<button type="button" data-emoji-toggle
+								class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-surface-gray-2"
+								:class="emojiOpen ? 'text-ink-gray-9' : 'text-ink-gray-6'"
+								:title="__('Emoji')" @click="toggleEmoji">
+								<FeatherIcon name="smile" class="h-4 w-4" />
+							</button>
 							<textarea ref="input" v-model="draft" rows="1"
 								class="max-h-24 min-h-[1.75rem] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-sm text-ink-gray-8 placeholder:text-ink-gray-4 focus:outline-none focus:ring-0"
 								:placeholder="composerPlaceholder" @input="onDraftInput" @keydown="onKeydown" />
 							<button type="button"
 								class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-gray-6 hover:bg-surface-gray-2 disabled:opacity-40"
-								:disabled="sending || (!draft.trim() && !attachment)" :title="__('Send')" @click="send">
+								:disabled="sending || (!draft.trim() && !attachments.length)" :title="__('Send')" @click="send">
 								<FeatherIcon :name="sending ? 'loader' : 'send'" class="h-4 w-4" :class="sending ? 'animate-spin' : ''" />
 							</button>
 						</div>
@@ -293,6 +343,10 @@
 			</template>
 		</div>
 	</Teleport>
+
+	<!-- Above the chat window's own z-[80]; the default z-[60] would put a
+	     full-screen viewer *behind* the window that opened it. -->
+	<ImageLightbox v-model="lightboxIndex" :images="lightboxImages" z-class="z-[120]" />
 </template>
 
 <script setup>
@@ -303,6 +357,8 @@
 import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 import { FeatherIcon, call } from "frappe-ui"
+import EmojiPicker from "@/components/EmojiPicker.vue"
+import ImageLightbox from "@/components/ImageLightbox.vue"
 import {
 	chatOpen,
 	chatMinimized,
@@ -341,7 +397,13 @@ const hasOlder = ref(false)
 const draft = ref("")
 const sending = ref(false)
 const sendError = ref("")
-const attachment = ref(null)
+// [{ key, file, preview }] — `preview` is an object URL, and only for images.
+const attachments = ref([])
+const emojiOpen = ref(false)
+const emojiEl = ref(null)
+const dropActive = ref(false)
+const lightboxIndex = ref(null)
+const lightboxImages = ref([])
 const scroller = ref(null)
 const input = ref(null)
 const windowEl = ref(null)
@@ -766,25 +828,115 @@ function buildMessageHtml(plain) {
 	return `<p>${html.replace(/\n/g, "<br>")}</p>`
 }
 
-// --- Sending --------------------------------------------------------------
+// --- Attachments ----------------------------------------------------------
+// Files can arrive three ways — the paperclip, a paste, or a drop — so staging
+// is one function and the three entry points all feed it.
+let attachSeq = 0
+
+function stageFiles(files) {
+	for (const file of files) {
+		if (!file) continue
+		attachments.value.push({
+			key: `f${attachSeq++}`,
+			file,
+			// Object URLs, revoked in removeAttachment/clearAttachments. A data URL
+			// would mean reading every dropped file into memory as base64 for a
+			// 32px thumbnail.
+			preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+		})
+	}
+	if (files.length) nextTick(() => input.value?.focus())
+}
+
+function removeAttachment(i) {
+	const [gone] = attachments.value.splice(i, 1)
+	if (gone?.preview) URL.revokeObjectURL(gone.preview)
+}
+
+function clearAttachments() {
+	for (const a of attachments.value) if (a.preview) URL.revokeObjectURL(a.preview)
+	attachments.value = []
+}
+
 function onFilePicked(e) {
-	const f = e.target.files?.[0]
-	if (f) attachment.value = f
+	stageFiles(Array.from(e.target.files || []))
+	// Reset, or picking the same file twice in a row fires no change event.
 	e.target.value = ""
 }
 
+// Paste. A screenshot on the clipboard arrives as a File on the paste event —
+// there is no filename, so the browser names it "image.png"; good enough, and
+// the message shows the image itself rather than the name anyway.
+//
+// Bound on the window rather than the textarea so a paste still attaches when
+// the caret is elsewhere in the panel; scoping it to the window (not the
+// document) is what stops chat from swallowing pastes meant for the page behind
+// it.
+function onPaste(e) {
+	if (!activeChannel.value) return
+	const files = Array.from(e.clipboardData?.files || [])
+	if (!files.length) return
+	// Only swallow the paste when it actually carried files. Copying an image out
+	// of a rich document puts both a file and its text on the clipboard, and the
+	// text should still land in the box when there is no file.
+	e.preventDefault()
+	stageFiles(files)
+}
+
+// Drop. dragenter/dragleave fire for every child element the pointer crosses,
+// so a plain boolean flickers; counting enters against leaves is what keeps the
+// overlay steady while the pointer moves over the message list.
+let dragDepth = 0
+
+function hasFiles(e) {
+	return Array.from(e.dataTransfer?.types || []).includes("Files")
+}
+
+function onDragEnter(e) {
+	if (!activeChannel.value || !hasFiles(e)) return
+	dragDepth++
+	dropActive.value = true
+}
+
+function onDragOver(e) {
+	// Without this the cursor shows "no drop" even though the drop is accepted.
+	if (dropActive.value && e.dataTransfer) e.dataTransfer.dropEffect = "copy"
+}
+
+function onDragLeave() {
+	dragDepth = Math.max(0, dragDepth - 1)
+	if (!dragDepth) dropActive.value = false
+}
+
+function onDrop(e) {
+	dragDepth = 0
+	dropActive.value = false
+	if (!activeChannel.value) return
+	stageFiles(Array.from(e.dataTransfer?.files || []))
+}
+
+// --- Sending --------------------------------------------------------------
 async function send() {
 	if (sending.value) return
 	const plain = draft.value.trim()
-	if (!plain && !attachment.value) return
+	if (!plain && !attachments.value.length) return
 	sending.value = true
 	sendError.value = ""
 	try {
-		if (attachment.value) await uploadFile(plain)
-		else await call("raven.api.raven_message.send_message", { channel_id: activeChannel.value, text: buildMessageHtml(plain) })
+		if (attachments.value.length) {
+			// One message per file — the endpoint takes a single file — with the
+			// typed text riding on the first as its caption. Sequential, not
+			// Promise.all: parallel uploads arrive out of order, so three dropped
+			// photos would land in a different order than they were shown staged.
+			for (const [i, a] of attachments.value.entries()) {
+				await uploadFile(a.file, i === 0 ? plain : "")
+			}
+		} else {
+			await call("raven.api.raven_message.send_message", { channel_id: activeChannel.value, text: buildMessageHtml(plain) })
+		}
 		draft.value = ""
 		pendingMentions.value = []
-		attachment.value = null
+		clearAttachments()
 		await loadMessages()
 	} catch (e) {
 		sendError.value = e?.messages?.[0] || e?.message || __("Could not send the message.")
@@ -794,9 +946,9 @@ async function send() {
 
 // The upload endpoint takes multipart form-data and creates the Raven Message
 // itself, so it cannot go through frappe-ui's `call`.
-async function uploadFile(caption) {
+async function uploadFile(file, caption) {
 	const form = new FormData()
-	form.append("file", attachment.value)
+	form.append("file", file)
 	form.append("channelID", activeChannel.value)
 	form.append("caption", caption ? buildMessageHtml(caption) : "")
 	form.append("compressImages", "1")
@@ -806,6 +958,43 @@ async function uploadFile(caption) {
 		body: form,
 	})
 	if (!res.ok) throw new Error(await res.text())
+}
+
+// --- Emoji ----------------------------------------------------------------
+function toggleEmoji() {
+	emojiOpen.value = !emojiOpen.value
+}
+
+// Inserted at the caret rather than appended, so an emoji can go mid-sentence.
+// The textarea is uncontrolled between renders, so read the caret off the DOM.
+function insertEmoji(char) {
+	const el = input.value
+	const at = el?.selectionStart ?? draft.value.length
+	const end = el?.selectionEnd ?? at
+	draft.value = draft.value.slice(0, at) + char + draft.value.slice(end)
+	emojiOpen.value = false
+	nextTick(() => {
+		el?.focus()
+		const pos = at + char.length
+		el?.setSelectionRange(pos, pos)
+	})
+}
+
+// --- Images ---------------------------------------------------------------
+function isImageMessage(m) {
+	// message_type is the reliable signal — Raven sets it on upload. The
+	// extension check is the fallback for messages created another way, e.g. the
+	// Desk timeline button, which leaves message_type as "File".
+	if (m.message_type === "Image") return true
+	return /\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/i.test(m.file || "")
+}
+
+// Every image in the open conversation becomes the gallery, so the arrows step
+// between them rather than dead-ending on the one that was clicked.
+function openImage(m) {
+	const all = rows.value.filter((r) => r.type === "msg" && r.m.file && isImageMessage(r.m)).map((r) => r.m.file)
+	lightboxImages.value = all
+	lightboxIndex.value = Math.max(0, all.indexOf(m.file))
 }
 
 // --- Dragging -------------------------------------------------------------
@@ -894,8 +1083,26 @@ function reclamp() {
 	setChatPos(clampToViewport(chatPos.value.x, chatPos.value.y))
 }
 watch([chatMinimized, chatOpen], () => nextTick(reclamp))
+
+// Click-away for the emoji picker. Capture phase, so it still closes when the
+// click lands on something that stops propagation on its way up.
+function onDocPointerDown(e) {
+	if (!emojiOpen.value) return
+	if (emojiEl.value?.contains(e.target)) return
+	// The toggle handles its own close; without this exception the click would
+	// close here and reopen there.
+	if (e.target.closest?.("[data-emoji-toggle]")) return
+	emojiOpen.value = false
+}
+
+function onDocKeydown(e) {
+	if (e.key === "Escape" && emojiOpen.value) emojiOpen.value = false
+}
+
 onMounted(() => {
 	window.addEventListener("resize", reclamp)
+	document.addEventListener("pointerdown", onDocPointerDown, true)
+	document.addEventListener("keydown", onDocKeydown)
 	// Load users up front, not just on open: an incoming-message toast needs a
 	// name and a face, and it can fire long before anyone opens the window.
 	ensureRavenUsersLoaded()
@@ -903,6 +1110,9 @@ onMounted(() => {
 onUnmounted(() => {
 	window.removeEventListener("resize", reclamp)
 	window.removeEventListener("pointermove", onPointerMove)
+	document.removeEventListener("pointerdown", onDocPointerDown, true)
+	document.removeEventListener("keydown", onDocKeydown)
+	clearAttachments()
 })
 
 // --- Wiring ---------------------------------------------------------------
@@ -960,6 +1170,12 @@ function leaveRoom() {
 }
 watch(activeChannel, (id) => {
 	leaveRoom()
+	// Staged files belong to the conversation they were staged in — carrying them
+	// across a switch is how a screenshot ends up in the wrong DM.
+	clearAttachments()
+	emojiOpen.value = false
+	dropActive.value = false
+	lightboxIndex.value = null
 	if (!id) return
 	loadMessages()
 	if (socket) {
