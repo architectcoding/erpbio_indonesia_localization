@@ -184,7 +184,18 @@
 								<span class="h-px flex-1 bg-outline-gray-2" />
 							</div>
 
-							<div v-else class="flex gap-2" :class="[row.own ? 'flex-row-reverse' : '', row.head ? 'mt-2' : 'mt-0.5']">
+							<!-- Thread replies sit indented under their parent, with a rule
+							     down the left so a bot answer reads as a reply to the
+							     question above it rather than a new message. -->
+							<div
+								v-else
+								class="flex gap-2"
+								:class="[
+									row.own ? 'flex-row-reverse' : '',
+									row.head ? 'mt-2' : 'mt-0.5',
+									row.indent ? 'ml-3 border-l pl-2' : '',
+								]"
+							>
 								<!-- Avatar only on the first message of a run, so a burst
 								     from one person reads as one block. -->
 								<span v-if="!row.own" class="h-6 w-6 shrink-0" :class="row.head ? '' : 'invisible'">
@@ -336,6 +347,9 @@ const input = ref(null)
 const windowEl = ref(null)
 const startingDm = ref("")
 
+// parent message name -> its thread's replies, oldest first.
+const threadReplies = ref({})
+
 // Mentions picked from the autocomplete. Kept as {label, id} so that on send we
 // can turn each "@Label" back into the span Raven's parser looks for
 // (data-type="userMention"); typing a name by hand is deliberately NOT a mention.
@@ -413,12 +427,18 @@ const mentionMatches = computed(() => {
 // Flatten oldest-first into render rows, inserting a date divider whenever the
 // day changes and marking the first message of each same-sender run so only it
 // carries an avatar and a name.
+//
+// Thread replies are folded in directly under their parent. Raven answers a bot
+// DM by opening a *thread* on the question and replying there, not in the DM —
+// so without this the panel shows your question and nothing else, and an AI bot
+// looks broken. Reading them inline also just suits a narrow window better than
+// making people open a thread per message.
 const rows = computed(() => {
 	const out = []
 	let lastDay = null
 	let lastSender = null
-	const ordered = [...messages.value].reverse()
-	for (const m of ordered) {
+
+	const push = (m, indent) => {
 		const d = dayjs(m.creation)
 		const day = d.format("YYYY-MM-DD")
 		if (day !== lastDay) {
@@ -437,8 +457,16 @@ const rows = computed(() => {
 			head: sender !== lastSender,
 			time: d.format("HH:mm"),
 			body: messageBody(m),
+			indent,
 		})
 		lastSender = sender
+	}
+
+	for (const m of [...messages.value].reverse()) {
+		push(m, false)
+		// The thread channel's id IS the parent message's name, which is what
+		// makes this lookup a plain map hit rather than another round trip.
+		for (const reply of threadReplies.value[m.name] || []) push(reply, true)
 	}
 	return out
 })
@@ -523,12 +551,44 @@ async function loadMessages() {
 		hasOlder.value = !!d?.has_old_messages
 		clearUnreadFor(activeChannel.value)
 		refreshUnread()
+		await loadThreadReplies()
 		await nextTick()
 		scrollToBottom()
 	} catch (e) {
 		messages.value = []
 	}
 	messagesLoading.value = false
+}
+
+// Fetch the replies for every message that opened a thread, and join those
+// thread rooms so their replies arrive live too. A bot answer lands in the
+// thread channel, which the DM's own room never publishes.
+async function loadThreadReplies() {
+	const parents = messages.value.filter((m) => m.is_thread).map((m) => m.name)
+	if (!parents.length) {
+		threadReplies.value = {}
+		return
+	}
+
+	const results = await Promise.all(
+		parents.map((name) =>
+			call("raven.api.chat_stream.get_messages", { channel_id: name, limit: 20 })
+				.then((d) => [
+					name,
+					(d?.messages || [])
+						// Raven opens a thread per bot question and each one gets an
+						// "X joined" system message. Useful in a real channel, pure
+						// noise repeated under every single exchange with a bot.
+						.filter((m) => m.message_type !== "System")
+						.slice()
+						.reverse(),
+				])
+				// A thread we cannot read is not worth failing the whole panel over.
+				.catch(() => [name, []])
+		)
+	)
+	threadReplies.value = Object.fromEntries(results)
+	subscribeThreads(parents)
 }
 
 async function loadOlder() {
@@ -862,16 +922,40 @@ watch(chatOpen, (open) => {
 // it again on switch. Without the explicit doc_subscribe the event never reaches
 // this socket.
 let subscribedTo = null
+let subscribedThreads = []
+
 function onChannelActivity(data) {
-	if (!data || data.channel_id !== activeChannel.value) return
+	if (!data) return
+	// Accept the conversation itself and any thread hanging off it — a bot reply
+	// only ever publishes to the thread's room.
+	if (data.channel_id !== activeChannel.value && !subscribedThreads.includes(data.channel_id)) return
 	loadMessages()
 }
+
+// Join the room of each thread on screen. Idempotent: re-called on every load,
+// so it only subscribes to rooms it has not already joined and drops the rest.
+function subscribeThreads(parents) {
+	if (!socket) return
+	for (const id of subscribedThreads) {
+		if (!parents.includes(id)) socket.emit("doc_unsubscribe", "Raven Channel", id)
+	}
+	for (const id of parents) {
+		if (!subscribedThreads.includes(id)) socket.emit("doc_subscribe", "Raven Channel", id)
+	}
+	subscribedThreads = [...parents]
+}
+
 function leaveRoom() {
 	if (socket && subscribedTo) {
 		socket.emit("doc_unsubscribe", "Raven Channel", subscribedTo)
 		socket.off("message_updated", onChannelActivity)
 		socket.off("message_deleted", onChannelActivity)
 	}
+	if (socket) {
+		for (const id of subscribedThreads) socket.emit("doc_unsubscribe", "Raven Channel", id)
+	}
+	subscribedThreads = []
+	threadReplies.value = {}
 	subscribedTo = null
 }
 watch(activeChannel, (id) => {
