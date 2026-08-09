@@ -1,6 +1,16 @@
 <template>
 	<div class="border-t p-3">
+		<!-- [theme] [account ....] [chat], matching the erpbio_general SPAs. -->
 		<div class="flex items-center gap-1">
+			<button
+				type="button"
+				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-gray-6 hover:bg-surface-gray-2 hover:text-ink-gray-9"
+				:title="theme === 'dark' ? __('Switch to light mode') : __('Switch to dark mode')"
+				:aria-label="theme === 'dark' ? __('Switch to light mode') : __('Switch to dark mode')"
+				@click="toggleTheme"
+			>
+				<FeatherIcon :name="theme === 'dark' ? 'sun' : 'moon'" class="h-4 w-4" />
+			</button>
 			<div class="min-w-0 flex-1">
 				<Dropdown :options="userMenu" placement="top-start">
 					<button class="flex w-full items-center gap-2 rounded-md p-1 hover:bg-surface-gray-2">
@@ -24,12 +34,18 @@
 			</div>
 			<button
 				type="button"
-				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-gray-6 hover:bg-surface-gray-2 hover:text-ink-gray-9"
-				:title="theme === 'dark' ? __('Switch to light mode') : __('Switch to dark mode')"
-				:aria-label="theme === 'dark' ? __('Switch to light mode') : __('Switch to dark mode')"
-				@click="toggleTheme"
+				class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-surface-gray-2 hover:text-ink-gray-9"
+				:class="chatOpen ? 'bg-surface-gray-3 text-ink-gray-9' : 'text-ink-gray-6'"
+				:title="__('Chat')"
+				:aria-label="__('Chat')"
+				@click="toggleChat"
 			>
-				<FeatherIcon :name="theme === 'dark' ? 'sun' : 'moon'" class="h-4 w-4" />
+				<FeatherIcon name="message-circle" class="h-4 w-4" />
+				<span
+					v-if="unreadTotal"
+					class="absolute -right-1 -top-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none text-white shadow"
+					style="background:#ef4444"
+				>{{ unreadTotal > 99 ? "99+" : unreadTotal }}</span>
 			</button>
 		</div>
 
@@ -88,17 +104,31 @@
 // What remains is what works on core alone: Desk, language, about, log out —
 // plus the app selector, which asks this app's own endpoint and simply hides
 // itself when there are no sibling apps to switch to (see api/tax.get_launcher_apps).
-import { computed, inject, markRaw, ref } from "vue"
+//
+// Chat is the one addition that does NOT breach the standalone rule above: it
+// talks to Raven, a separate app, not to erpbio_general. Where Raven is absent
+// (or the user has no Raven User record) every call fails closed and the panel
+// says so, rather than the button breaking.
+import { computed, inject, markRaw, onMounted, onUnmounted, ref } from "vue"
 import { Dialog, Dropdown, FeatherIcon, call } from "frappe-ui"
 import { useTheme } from "@/composables/useTheme"
 import AboutDialog from "@/components/AboutDialog.vue"
 import AppsMenuItem from "@/components/AppsMenuItem.vue"
 import { launcherApps, ensureLauncherAppsLoaded } from "@/data/launcherApps"
+import { chatOpen, toggleChat, unreadTotal, refreshUnread, subscribeUnread } from "@/composables/useChat"
 
 const __ = inject("$translate")
 const session = inject("$session")
 const user = inject("$user", null)
+const socket = inject("$socket", null)
 const { theme, toggleTheme } = useTheme()
+
+let unsubscribeUnread = () => {}
+onMounted(() => {
+	refreshUnread()
+	unsubscribeUnread = subscribeUnread(socket)
+})
+onUnmounted(() => unsubscribeUnread())
 
 const displayName = computed(() => user?.full_name || user?.name || session?.user || "")
 const initials = computed(() =>

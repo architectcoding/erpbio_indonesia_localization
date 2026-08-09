@@ -21,6 +21,16 @@
 				<span class="hidden sm:inline">{{ __("Share") }}</span>
 			</span>
 		</Button>
+		<!-- Send the document itself to a colleague in Raven. Separate from Share
+		     because Share here goes straight to the OS share sheet with a PDF —
+		     erpbio_general's copy has a routes panel this fork never gained, so
+		     there is no menu to add an entry to. -->
+		<Button variant="subtle" class="!h-8 !w-8 justify-center !px-0 sm:!w-auto sm:!px-2.5" @click="shareToChatOpen = true">
+			<span class="flex items-center justify-center gap-1.5 whitespace-nowrap">
+				<FeatherIcon name="message-square" class="h-4 w-4" />
+				<span class="hidden sm:inline">{{ __("Chat") }}</span>
+			</span>
+		</Button>
 		<Dropdown :options="emailOptions">
 			<Button variant="subtle" class="!h-8 !w-8 justify-center !px-0 sm:!w-auto sm:!px-2.5">
 				<span class="flex items-center justify-center gap-1.5 whitespace-nowrap">
@@ -30,6 +40,8 @@
 			</Button>
 		</Dropdown>
 	</div>
+
+	<ShareToRavenDialog v-model="shareToChatOpen" :doctype="doctype" :name="name" :label="label" />
 
 	<!-- Compose email (system send) -->
 	<div v-if="showEmail" class="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-16 sm:pt-24"
@@ -117,6 +129,7 @@
 <script setup>
 import { computed, inject, ref } from "vue"
 import { Button, Dropdown, FeatherIcon, LoadingIndicator, TextEditor, call } from "frappe-ui"
+import ShareToRavenDialog from "@/components/ShareToRavenDialog.vue"
 const __ = inject("$translate")
 
 const props = defineProps({
@@ -208,6 +221,7 @@ function viewPdf(format) {
 // WhatsApp tab — that double behaviour looked broken on mobile. Only fall back
 // to WhatsApp when there's no native share at all (typical desktop).
 const sharing = ref(false)
+const shareToChatOpen = ref(false)
 async function share() {
 	sharing.value = true
 	try {

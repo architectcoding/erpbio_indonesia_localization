@@ -28,6 +28,7 @@
 
 		<!-- Hover quick-info card for doc links; teleports itself to <body>. -->
 		<DocPreviewHost />
+		<ChatPanel />
 	</div>
 </template>
 
@@ -35,6 +36,7 @@
 import { inject } from "vue"
 import { RouterLink, useRoute } from "vue-router"
 import DocPreviewHost from "@/components/DocPreviewHost.vue"
+import ChatPanel from "@/components/ChatPanel.vue"
 import NotificationsBell from "@/components/NotificationsBell.vue"
 import SidebarUserFooter from "@/components/SidebarUserFooter.vue"
 
