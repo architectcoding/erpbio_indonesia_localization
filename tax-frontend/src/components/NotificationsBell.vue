@@ -53,15 +53,21 @@
 </template>
 
 <script setup>
-// Copied from erpbio_general spa-shared rather than imported: this app is
-// deliberately self-contained (clean-room MIT, installs without erpbio_general),
-// so it must not take a build-time dependency on it. Keep in sync by hand.
-// Two deviations from the original, both required here:
-//   * it reads THIS app's api.tax notification endpoints, which wrap core's
-//     Notification Log — the shared component's erpbio_general.api.sales_tools
-//     calls would be a *runtime* dependency on that app being installed.
-//   * `__` is injected: erpbio_general's apps get a global __ from frappe-ui's
-//     translation plugin, while this app provides $translate.
+// One of the few components still forked from erpbio_general's spa-shared
+// instead of imported through the @shared alias, and the reason is RUNTIME, not
+// build-time: the shared bell hardcodes erpbio_general.api.sales_tools at three
+// call sites with no apiModule prop, so using it would make this app fail
+// wherever erpbio_general isn't installed. This copy reads THIS app's api.tax
+// endpoints, which wrap core's own Notification Log and need no sibling app.
+//
+// Retire this fork by adding an `apiModule` prop to the shared component (the
+// same shape DocActions already has) and pointing it at api.tax — that belongs
+// in its own change, since editing spa-shared forces a rebuild of all eight
+// erpbio_general SPAs.
+//
+// `__` is injected rather than taken from the global: both work now that
+// translationsPlugin is installed, and inject("$translate") is the documented
+// in-script form.
 import { inject, ref } from "vue"
 import { useRouter } from "vue-router"
 import { FeatherIcon, call } from "frappe-ui"

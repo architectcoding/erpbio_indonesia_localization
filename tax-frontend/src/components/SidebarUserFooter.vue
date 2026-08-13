@@ -94,8 +94,9 @@
 // footer (avatar → name → chevron, theme toggle on the right).
 //
 // Modelled on erpbio_general's accounting-frontend/SidebarUserFooter.vue but
-// deliberately NOT a copy of it: most of that menu is erpbio_general-coupled and
-// cannot work in a standalone install of this app —
+// deliberately NOT a copy of it, and still local now that the @shared alias
+// exists: the reason was never the build, it is that most of that menu makes
+// runtime calls into erpbio_general and so cannot work in a standalone install —
 //   * Send Feedback posts to erpbio_general.api.feedback,
 //   * "Open ERPbio Mobile" is an erpbio_general route,
 //   * "Customize Sidebar" drives a per-workspace nav-layout system this app has
@@ -111,11 +112,11 @@
 // says so, rather than the button breaking.
 import { computed, inject, markRaw, onMounted, onUnmounted, ref } from "vue"
 import { Dialog, Dropdown, FeatherIcon, call } from "frappe-ui"
-import { useTheme } from "@/composables/useTheme"
-import AboutDialog from "@/components/AboutDialog.vue"
+import { useTheme } from "@shared/composables/useTheme"
+import AboutDialog from "@shared/components/AboutDialog.vue"
 import AppsMenuItem from "@/components/AppsMenuItem.vue"
 import { launcherApps, ensureLauncherAppsLoaded } from "@/data/launcherApps"
-import { chatOpen, toggleChat, unreadTotal, refreshUnread, subscribeUnread } from "@/composables/useChat"
+import { chatOpen, toggleChat, unreadTotal, refreshUnread, subscribeUnread } from "@shared/composables/useChat"
 
 const __ = inject("$translate")
 const session = inject("$session")

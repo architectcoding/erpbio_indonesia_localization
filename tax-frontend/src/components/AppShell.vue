@@ -35,8 +35,8 @@
 <script setup>
 import { inject } from "vue"
 import { RouterLink, useRoute } from "vue-router"
-import DocPreviewHost from "@/components/DocPreviewHost.vue"
-import ChatPanel from "@/components/ChatPanel.vue"
+import DocPreviewHost from "@shared/components/DocPreviewHost.vue"
+import ChatPanel from "@shared/components/ChatPanel.vue"
 import NotificationsBell from "@/components/NotificationsBell.vue"
 import SidebarUserFooter from "@/components/SidebarUserFooter.vue"
 

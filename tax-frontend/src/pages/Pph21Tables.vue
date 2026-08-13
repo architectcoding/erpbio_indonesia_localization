@@ -104,7 +104,7 @@
 <script setup>
 import { computed, h, inject, ref } from "vue"
 import { Badge, call } from "frappe-ui"
-import { formatCurrency, formatNumber } from "@/utils/format"
+import { formatCurrency, formatNumber } from "@shared/utils/format"
 
 const __ = inject("$translate")
 

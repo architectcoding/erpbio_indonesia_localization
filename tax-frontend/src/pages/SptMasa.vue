@@ -61,7 +61,7 @@
 import { inject, ref } from "vue"
 import { RouterLink } from "vue-router"
 import { call } from "frappe-ui"
-import { formatCurrency } from "@/utils/format"
+import { formatCurrency } from "@shared/utils/format"
 
 const __ = inject("$translate")
 

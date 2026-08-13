@@ -43,7 +43,7 @@
 <script setup>
 import { h, inject, ref } from "vue"
 import { Badge, call } from "frappe-ui"
-import ListView from "@/components/ListView.vue"
+import ListView from "@shared/components/ListView.vue"
 
 const __ = inject("$translate")
 

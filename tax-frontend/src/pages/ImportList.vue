@@ -31,7 +31,7 @@
 import { h, inject, ref } from "vue"
 import { useRouter } from "vue-router"
 import { Badge, Button, FeatherIcon, call } from "frappe-ui"
-import ListView from "@/components/ListView.vue"
+import ListView from "@shared/components/ListView.vue"
 
 const __ = inject("$translate")
 const router = useRouter()

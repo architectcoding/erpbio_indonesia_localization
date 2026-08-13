@@ -186,9 +186,9 @@
 import { computed, inject, reactive, ref } from "vue"
 import { RouterLink } from "vue-router"
 import { call } from "frappe-ui"
-import DatePickerPopover from "@/components/DatePickerPopover.vue"
-import DocActions from "@/components/DocActions.vue"
-import { formatCurrency, formatNumber } from "@/utils/format"
+import DatePickerPopover from "@shared/components/DatePickerPopover.vue"
+import DocActions from "@shared/components/DocActions.vue"
+import { formatCurrency, formatNumber } from "@shared/utils/format"
 
 const props = defineProps({ name: { type: String, required: true } })
 const __ = inject("$translate")

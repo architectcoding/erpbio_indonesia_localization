@@ -97,7 +97,7 @@
 import { computed, inject, reactive, ref } from "vue"
 import { RouterLink } from "vue-router"
 import { call } from "frappe-ui"
-import { formatCurrency } from "@/utils/format"
+import { formatCurrency } from "@shared/utils/format"
 
 const props = defineProps({ name: { type: String, required: true } })
 const __ = inject("$translate")

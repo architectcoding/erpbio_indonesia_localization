@@ -82,8 +82,8 @@
 import { computed, inject, ref } from "vue"
 import { RouterLink } from "vue-router"
 import { call } from "frappe-ui"
-import { formatCurrency } from "@/utils/format"
-import DocActions from "@/components/DocActions.vue"
+import { formatCurrency } from "@shared/utils/format"
+import DocActions from "@shared/components/DocActions.vue"
 
 const props = defineProps({ name: { type: String, required: true } })
 const __ = inject("$translate")

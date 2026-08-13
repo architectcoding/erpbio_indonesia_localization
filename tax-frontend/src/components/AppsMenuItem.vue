@@ -1,7 +1,8 @@
-<!-- Copied from erpbio_general spa-shared rather than imported: this app is
-     deliberately self-contained (clean-room MIT, installs without erpbio_general).
-     Verbatim apart from the launcherApps import, which points at this app's own
-     data module. Keep in sync by hand. -->
+<!-- Still forked from erpbio_general's spa-shared rather than imported through
+     the @shared alias, for a RUNTIME reason: the shared version resolves the app
+     list through erpbio_general.api.home, while this copy reads this app's own
+     data/launcherApps.js, which returns an empty list (and hides the menu) when
+     erpbio_general isn't installed. Otherwise verbatim — keep in sync by hand. -->
 <template>
 	<!-- Account-menu "Apps" row that opens a flyout of the user's permitted apps
 	     (à la the Frappe CRM app switcher). Rendered as a Dropdown item.component,

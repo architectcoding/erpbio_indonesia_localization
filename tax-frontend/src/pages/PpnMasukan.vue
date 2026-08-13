@@ -84,10 +84,10 @@
 </template>
 
 <script setup>
-import DatePickerPopover from "@/components/DatePickerPopover.vue"
+import DatePickerPopover from "@shared/components/DatePickerPopover.vue"
 import { computed, inject, ref } from "vue"
 import { call } from "frappe-ui"
-import { formatCurrency } from "@/utils/format"
+import { formatCurrency } from "@shared/utils/format"
 
 const __ = inject("$translate")
 

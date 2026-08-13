@@ -8,7 +8,16 @@ app_license = "mit"
 # Apps
 # ------------------
 
-required_apps = ["erpnext"]
+# hrms is required because pph21/salary_slip.py is wired in through HRMS's own
+# regional_overrides extension point below -- that hook names an hrms.* dotted
+# path, so the app cannot function without it.
+#
+# erpbio_general is deliberately NOT listed. The tax SPA builds against that
+# app's spa-shared component library (see tax-frontend/vite.config.js), but that
+# is a BUILD-time dependency only: public/tax/ ships pre-built, and every shared
+# component used here degrades gracefully when erpbio_general's endpoints are
+# absent. So this app still installs and runs on bare ERPNext + HRMS.
+required_apps = ["erpnext", "hrms"]
 
 # Installation
 # ------------

@@ -4,15 +4,18 @@ import { FrappeUI, Button, FormControl, FeatherIcon, Badge, setConfig, frappeReq
 import App from "./App.vue"
 import router from "./router"
 import { session } from "./session"
-import { translate, loadTranslations } from "./translate"
+// The shared plugin, not a local translate.js: it installs the global __ that
+// every @shared component calls, and still provides "$translate" for this app's
+// own inject() call sites. Reads boot.__messages, same source as before.
+import { translationsPlugin, __ } from "@shared/plugins/translationsPlugin"
 import dayjs from "./utils/dayjs"
-import { setNumberFormat } from "./utils/format"
-import { vDocPreview, closePreview, configureDocPreview } from "./composables/docPreview"
+import { setNumberFormat } from "@shared/utils/format"
+import { vDocPreview, closePreview, configureDocPreview } from "@shared/composables/docPreview"
 // Point the hover cards at this app's own api, not erpbio_general's.
 configureDocPreview("erpbio_indonesia_localization.api.tax")
 // Side-effect import: applies the saved/system theme to <html> before anything
 // renders, so the Login page (which has no toggle) opens in the right theme too.
-import "./composables/useTheme"
+import "@shared/composables/useTheme"
 
 import "./main.css"
 
@@ -21,6 +24,7 @@ const app = createApp(App)
 setConfig("resourceFetcher", frappeRequest)
 app.use(FrappeUI)
 app.use(router)
+app.use(translationsPlugin)
 
 app.component("Button", Button)
 app.component("FormControl", FormControl)
@@ -32,8 +36,8 @@ app.directive("doc-preview", vDocPreview)
 // Close a stranded preview card whenever the route changes.
 router.afterEach(() => closePreview())
 
+// "$translate" is provided by translationsPlugin.install().
 app.provide("$session", session)
-app.provide("$translate", translate)
 app.provide("$dayjs", dayjs)
 
 router.isReady().then(async () => {
@@ -45,7 +49,10 @@ router.isReady().then(async () => {
 			window.frappe.boot = values
 		})
 	}
-	loadTranslations()
+	// Must come AFTER the dev boot fetch above: the catalog is read out of
+	// boot.__messages, and must be loaded before anything renders so __() never
+	// flashes untranslated text.
+	await translationsPlugin.isReady()
 
 	// Amounts should read the way Desk renders them (1.234.567,89 on an
 	// Indonesian site), so pick the site's format up before the first render.
@@ -71,7 +78,7 @@ router.isReady().then(async () => {
 	app.provide("$user", ctx?.user || null)
 	// Translated, so About matches the sidebar heading (which renders __()).
 	app.provide("$branding", {
-		title: translate(window.frappe?.boot?.app_title || "ERPbio Tax"),
+		title: __(window.frappe?.boot?.app_title || "ERPbio Tax"),
 		logo: window.frappe?.boot?.app_logo || "",
 	})
 	app.mount("#app")
