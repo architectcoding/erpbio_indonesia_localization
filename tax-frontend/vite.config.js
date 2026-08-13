@@ -35,7 +35,7 @@ export default defineConfig({
 		// spa-shared sits outside this package root -- outside this repo entirely --
 		// so without dedupe its imports of vue/frappe-ui resolve to a second copy
 		// up the tree, and two Vue instances break injection and reactivity.
-		dedupe: ["vue", "vue-router", "frappe-ui"],
+		dedupe: ["vue", "vue-router", "frappe-ui", "vuedraggable"],
 	},
 	build: {
 		outDir: "../erpbio_indonesia_localization/public/tax",
