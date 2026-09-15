@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build --base=/assets/erpbio_indonesia_localization/tax/ && yarn copy-html-entry",
-    "copy-html-entry": "cp ../erpbio_indonesia_localization/public/tax/index.html ../erpbio_indonesia_localization/www/erpbio_tax.html"
+    "copy-html-entry": "node ../../erpbio_general/scripts/copy-html-entry.mjs tax tax ../erpbio_indonesia_localization"
   },
   "dependencies": {
     "@vitejs/plugin-vue": "^4.4.0",

@@ -28,6 +28,7 @@
 
 		<!-- Hover quick-info card for doc links; teleports itself to <body>. -->
 		<DocPreviewHost />
+		<AppUpdateHost />
 		<ChatPanel />
 	</div>
 </template>
@@ -36,6 +37,9 @@
 import { inject } from "vue"
 import { RouterLink, useRoute } from "vue-router"
 import DocPreviewHost from "@shared/components/DocPreviewHost.vue"
+// The refresh-on-update dialog. No socket here, so it relies on its polls;
+// its backend half asks erpbio_general and stays inert where that app is absent.
+import AppUpdateHost from "@shared/components/AppUpdateHost.vue"
 import ChatPanel from "@shared/components/ChatPanel.vue"
 import NotificationsBell from "@/components/NotificationsBell.vue"
 import SidebarUserFooter from "@/components/SidebarUserFooter.vue"
