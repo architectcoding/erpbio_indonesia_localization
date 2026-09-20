@@ -963,3 +963,120 @@ msgstr "Tanpa status PTKP — PPh 21 tidak dapat dihitung"
 
 msgid "The {0} scheme is not calculated yet"
 msgstr "Skema {0} belum dihitung"
+
+msgid "Tax Address (Alamat NPWP)"
+msgstr "Alamat Pajak (Alamat NPWP)"
+
+msgid "The address as registered with the tax office, one line. Goes out as BuyerAdress; blank = the invoice's billing address."
+msgstr "Alamat sesuai yang terdaftar di kantor pajak, satu baris. Dikirim sebagai BuyerAdress; kosong = alamat penagihan pada faktur."
+
+msgid "The address as registered with the tax office, one line."
+msgstr "Alamat sesuai yang terdaftar di kantor pajak, satu baris."
+
+msgid "Registered address for the Faktur Pajak on THIS document. Blank = the Customer's Tax Address, else the billing address."
+msgstr "Alamat terdaftar untuk Faktur Pajak pada dokumen INI. Kosong = Alamat Pajak Pelanggan, jika tidak ada alamat penagihan."
+
+msgid "The registered name exactly as it appears on the supplier's Faktur Pajak."
+msgstr "Nama terdaftar persis seperti pada Faktur Pajak pemasok."
+
+msgid "Tax Document Reader (NPWP / KTP)"
+msgstr "Pembaca Dokumen Pajak (NPWP / KTP)"
+
+msgid "Read tax documents when they are attached"
+msgstr "Baca dokumen pajak saat dilampirkan"
+
+msgid "An NPWP card, KTP or SKT/SPPKP attached to a Customer or Supplier is read in the background and its number, registered name and address are offered on the Tax Identity card. Needs the OCR pack on the bench (rapidocr-onnxruntime) for images and scans; born-digital PDFs read without it."
+msgstr "Kartu NPWP, KTP, atau SKT/SPPKP yang dilampirkan pada Pelanggan atau Pemasok dibaca di latar belakang; nomor, nama terdaftar, dan alamatnya ditawarkan pada kartu Identitas Pajak. Untuk gambar dan hasil pindai diperlukan paket OCR di bench (rapidocr-onnxruntime); PDF digital terbaca tanpa itu."
+
+msgid "Fill blank identity fields automatically"
+msgstr "Isi kolom identitas yang kosong secara otomatis"
+
+msgid "Only a BLANK field is ever filled, and only from a number the document states twice (or a born-digital PDF). A value already on the party is never overwritten: a difference is shown as a suggestion. Every automatic fill can be undone from the card."
+msgstr "Hanya kolom yang KOSONG yang diisi, dan hanya dari nomor yang tercantum dua kali pada dokumen (atau PDF digital). Nilai yang sudah ada tidak pernah ditimpa: perbedaan ditampilkan sebagai saran. Setiap pengisian otomatis dapat dibatalkan dari kartu."
+
+msgid "Tax Document Reading"
+msgstr "Pembacaan Dokumen Pajak"
+
+msgid "Party Type"
+msgstr "Jenis Pihak"
+
+msgid "Party"
+msgstr "Pihak"
+
+msgid "File Name"
+msgstr "Nama Berkas"
+
+msgid "Document Kind"
+msgstr "Jenis Dokumen"
+
+msgid "Read From"
+msgstr "Dibaca Dari"
+
+msgid "Confidence"
+msgstr "Keyakinan"
+
+msgid "Number Verified"
+msgstr "Nomor Terverifikasi"
+
+msgid "What the document says"
+msgstr "Yang tertulis pada dokumen"
+
+msgid "Tax ID (16 digits)"
+msgstr "NPWP/NIK (16 digit)"
+
+msgid "Legal Form on the Card"
+msgstr "Bentuk Badan pada Kartu"
+
+msgid "Outcome"
+msgstr "Hasil"
+
+msgid "Applied By"
+msgstr "Diterapkan Oleh"
+
+msgid "Applied On"
+msgstr "Diterapkan Pada"
+
+msgid "Read On"
+msgstr "Dibaca Pada"
+
+msgid "Error"
+msgstr "Kesalahan"
+
+msgid "Queued"
+msgstr "Antre"
+
+msgid "Suggested"
+msgstr "Disarankan"
+
+msgid "Auto-applied"
+msgstr "Diterapkan otomatis"
+
+msgid "Dismissed"
+msgstr "Ditutup"
+
+msgid "Nothing found"
+msgstr "Tidak ditemukan"
+
+msgid "Failed"
+msgstr "Gagal"
+
+msgid "That file is not attached to this {0}."
+msgstr "Berkas itu tidak terlampir pada {0} ini."
+
+msgid "Only images and PDFs can be read."
+msgstr "Hanya gambar dan PDF yang dapat dibaca."
+
+msgid "A Tax ID is 15 or 16 digits."
+msgstr "NPWP/NIK terdiri dari 15 atau 16 digit."
+
+msgid "Nothing to apply."
+msgstr "Tidak ada yang diterapkan."
+
+msgid "This reading was not applied."
+msgstr "Pembacaan ini belum diterapkan."
+
+msgid "Not a party"
+msgstr "Bukan pihak"
+
+msgid "OCR engine not installed on this server (pip install rapidocr-onnxruntime)"
+msgstr "Mesin OCR belum terpasang di server ini (pip install rapidocr-onnxruntime)"

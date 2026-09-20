@@ -52,6 +52,13 @@ CUSTOM_FIELDS = {
 			"description": "The registered name exactly as it appears on the Faktur Pajak (KTP name for an individual). Goes out as BuyerName; blank = the Customer Name.",
 		},
 		{
+			"fieldname": "eil_tax_address",
+			"label": "Tax Address (Alamat NPWP)",
+			"fieldtype": "Small Text",
+			"insert_after": "eil_tax_name",
+			"description": "The address as registered with the tax office, one line. Goes out as BuyerAdress; blank = the invoice's billing address.",
+		},
+		{
 			"fieldname": "eil_tax_col",
 			"fieldtype": "Column Break",
 			"insert_after": "eil_document_number",
@@ -83,6 +90,32 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Check",
 			"insert_after": "eil_country_code",
 			"description": "This buyer collects and deposits the PPN itself (bendahara/pemungut) and withholds PPh 22. Auto-set for the customer groups listed in Indonesia Tax Settings.",
+		},
+	],
+	# The seller's registered identity, for matching an incoming faktur (Pajak
+	# Masukan) to the bill and for the NPWP-card reader. Same fieldnames as on
+	# the Customer so one reader and one card serve both parties.
+	"Supplier": [
+		{
+			"fieldname": "eil_tax_section",
+			"label": "Indonesia Tax (Coretax)",
+			"fieldtype": "Section Break",
+			"insert_after": "tax_id",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "eil_tax_name",
+			"label": "Tax Name (Nama Wajib Pajak)",
+			"fieldtype": "Data",
+			"insert_after": "eil_tax_section",
+			"description": "The registered name exactly as it appears on the supplier's Faktur Pajak.",
+		},
+		{
+			"fieldname": "eil_tax_address",
+			"label": "Tax Address (Alamat NPWP)",
+			"fieldtype": "Small Text",
+			"insert_after": "eil_tax_name",
+			"description": "The address as registered with the tax office, one line.",
 		},
 	],
 	"Item": [
@@ -310,6 +343,13 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Data",
 			"insert_after": "tax_id",
 			"description": "Registered name for the Faktur Pajak on THIS document. Blank = the Customer's Tax Name, else the Customer Name.",
+		},
+		{
+			"fieldname": "eil_tax_address",
+			"label": "Tax Address (Alamat NPWP)",
+			"fieldtype": "Small Text",
+			"insert_after": "eil_tax_name",
+			"description": "Registered address for the Faktur Pajak on THIS document. Blank = the Customer's Tax Address, else the billing address.",
 		},
 	],
 	# Government (pemungut/WAPU) sales. The flag travels with the document so a

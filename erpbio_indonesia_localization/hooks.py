@@ -33,6 +33,12 @@ after_migrate = "erpbio_indonesia_localization.setup.install.setup_eil"
 # the Payment Entry itself or its GL. Both are fully try/except-guarded.
 
 doc_events = {
+	"File": {
+		# A tax document attached to a Customer/Supplier from the Desk arrives with
+		# attached_to_* set; the SPA path attaches after upload and reaches the same
+		# reader through erpbio_general's `erpbio_files_attached` hook below.
+		"after_insert": "erpbio_indonesia_localization.api.tax_ocr.on_file_after_insert",
+	},
 	"Payment Entry": {
 		# WAPU/Bendahara: auto-clear Piutang PPN Bendahara on receipts against
 		# pemungut invoices (negative deduction). See doc_events/payment_entry.py.
@@ -74,6 +80,13 @@ regional_overrides = {
 		"hrms.payroll.doctype.salary_slip.salary_slip.apply_regional_deductions": "erpbio_indonesia_localization.pph21.salary_slip.apply_pph21_deduction",
 	},
 }
+
+# erpbio_general: files adopted onto a document by the SPAs (doctype, name, [File names]).
+# Not a Frappe hook name -- a plain app-to-app hook read with frappe.get_hooks by
+# erpbio_general.api.attachments.adopt_files; harmless where erpbio_general is absent.
+erpbio_files_attached = ["erpbio_indonesia_localization.api.tax_ocr.on_files_attached"]
+# erpbio_general: the Tax Identity card asks whether a tax-document reader exists here.
+erpbio_tax_document_ocr = ["erpbio_indonesia_localization.api.tax_ocr.status"]
 
 # /erpbio-tax SPA (tax-frontend build served from www/erpbio_tax.html)
 website_route_rules = [

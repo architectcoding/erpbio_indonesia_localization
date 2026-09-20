@@ -19,7 +19,10 @@
   "output_vat_accounts",
   "govt_tax_defaults",
   "taxable_charge_section",
-  "taxable_charge_mappings"
+  "taxable_charge_mappings",
+  "tax_document_section",
+  "tax_document_ocr",
+  "tax_document_ocr_auto_fill"
  ],
  "fields": [
   {
@@ -122,11 +125,31 @@
    "fieldtype": "Table",
    "label": "Taxable Charge Mapping",
    "options": "EIL Taxable Charge Mapping"
+  },
+  {
+   "fieldname": "tax_document_section",
+   "fieldtype": "Section Break",
+   "label": "Tax Document Reader (NPWP / KTP)",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "tax_document_ocr",
+   "fieldtype": "Check",
+   "label": "Read tax documents when they are attached",
+   "default": "1",
+   "description": "An NPWP card, KTP or SKT/SPPKP attached to a Customer or Supplier is read in the background and its number, registered name and address are offered on the Tax Identity card. Needs the OCR pack on the bench (rapidocr-onnxruntime) for images and scans; born-digital PDFs read without it."
+  },
+  {
+   "fieldname": "tax_document_ocr_auto_fill",
+   "fieldtype": "Check",
+   "label": "Fill blank identity fields automatically",
+   "default": "1",
+   "description": "Only a BLANK field is ever filled, and only from a number the document states twice (or a born-digital PDF). A value already on the party is never overwritten: a difference is shown as a suggestion. Every automatic fill can be undone from the card."
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-07-23 12:00:00.000000",
+ "modified": "2026-09-21 06:35:00.000000",
  "modified_by": "Administrator",
  "module": "ERPbio Indonesia Localization",
  "name": "Indonesia Tax Settings",

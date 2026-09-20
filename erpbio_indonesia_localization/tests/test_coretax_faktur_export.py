@@ -861,6 +861,25 @@ class TestBuyerIdentity(_ExportCase):
 		si.eil_tax_name = "YAYASAN PEMBAYAR LAIN"  # the document overrides the customer
 		self.assertEqual(export._buyer_bits(si)["name"], "YAYASAN PEMBAYAR LAIN")
 
+	def test_buyer_address_is_the_registered_address_not_the_billing_block(self):
+		"""The faktur's trio is name, address and NPWP as registered. A branch buying
+		on the head office's NPWP prints the branch on the invoice, but the tax
+		office knows the head office; blank on file falls back to what the invoice
+		printed, which is what went out before the field existed."""
+		si = self._invoice([(self.goods, 1, 1_000_000, "Unit")], template=self.template_ppn)
+		export = self._export()
+		si.address_display = "Jl. Cabang No. 1<br>Semarang"
+		self.assertEqual(export._buyer_bits(si)["address"], "Jl. Cabang No. 1 Semarang")
+		frappe.db.set_value("Customer", self.buyer, "eil_tax_address", "JL. PUSAT RAYA NO. 9,\nRT 001 RW 002, JAKARTA SELATAN 12160", update_modified=False)
+		self.addCleanup(frappe.db.set_value, "Customer", self.buyer, "eil_tax_address", None, update_modified=False)
+		self.assertEqual(export._buyer_bits(si)["address"], "JL. PUSAT RAYA NO. 9, RT 001 RW 002, JAKARTA SELATAN 12160")
+		si.eil_tax_address = "JL. PEMBAYAR LAIN 5, BANDUNG"  # the document overrides the customer
+		self.assertEqual(export._buyer_bits(si)["address"], "JL. PEMBAYAR LAIN 5, BANDUNG")
+		si.eil_tax_address = None
+		si.address_display = None
+		frappe.db.set_value("Customer", self.buyer, "eil_tax_address", None, update_modified=False)
+		self.assertEqual(export._buyer_bits(si)["address"], "-")  # the schema element is mandatory
+
 
 # ===========================================================================
 # Item classification

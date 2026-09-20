@@ -104,6 +104,11 @@ def _strip_html(value):
 	return re.sub(r"<[^>]+>", " ", value or "").replace("&amp;", "&").strip()
 
 
+def _one_line(value):
+	"""A Small Text address as Coretax wants it: one line, single spaces."""
+	return re.sub(r"\s+", " ", (value or "").replace("<br>", " ")).strip()
+
+
 def _num(value):
 	"""12 -> '12', 1833333.33 -> '1833333.33' — plain decimals, no trailing zeros."""
 	text = f"{flt(value):.2f}".rstrip("0").rstrip(".")
@@ -402,7 +407,7 @@ class CoretaxFakturExport(Document):
 					buyer["country"],
 					buyer["document_number"],
 					buyer["name"],
-					_strip_html(si.address_display) or "-",
+					buyer["address"],
 					buyer["email"],
 					buyer["idtku"],
 				]
@@ -497,7 +502,7 @@ class CoretaxFakturExport(Document):
 			ET.SubElement(inv, "BuyerDocumentNumber").text = buyer["document_number"]
 			ET.SubElement(inv, "BuyerName").text = buyer["name"]
 			# sic: the DJP schema spells it "BuyerAdress"
-			ET.SubElement(inv, "BuyerAdress").text = _strip_html(si.address_display) or "-"
+			ET.SubElement(inv, "BuyerAdress").text = buyer["address"]
 			ET.SubElement(inv, "BuyerEmail").text = buyer["email"]
 			ET.SubElement(inv, "BuyerIDTKU").text = buyer["idtku"]
 			goods_el = ET.SubElement(inv, "ListOfGoodService")
@@ -537,7 +542,7 @@ class CoretaxFakturExport(Document):
 		customer = frappe.db.get_value(
 			"Customer",
 			si.customer,
-			["tax_id", "eil_id_type", "eil_document_number", "eil_nitku", "eil_tax_email", "eil_country_code", "eil_tax_name"],
+			["tax_id", "eil_id_type", "eil_document_number", "eil_nitku", "eil_tax_email", "eil_country_code", "eil_tax_name", "eil_tax_address"],
 			as_dict=True,
 		) or frappe._dict()
 		settings_country = frappe.db.get_single_value("Indonesia Tax Settings", "default_buyer_country")
@@ -548,6 +553,12 @@ class CoretaxFakturExport(Document):
 			# Semarang" is BELEFINA SARANA MEDIKA to the tax office. The document may
 			# override the customer (a faktur issued to the payer's institution).
 			"name": si.get("eil_tax_name") or customer.eil_tax_name or si.customer_name or si.customer,
+			# The address as registered with the tax office, not the billing block
+			# the invoice prints: a hospital under a foundation, a branch buying on
+			# the head office's NPWP, a PT at a virtual office -- the faktur's trio
+			# is name, address and NPWP as registered. Blank falls back to the
+			# invoice's address, which is what went out before this field existed.
+			"address": _one_line(si.get("eil_tax_address")) or _one_line(customer.eil_tax_address) or _strip_html(si.address_display) or "-",
 			"id_type": customer.eil_id_type or "TIN",
 			"document_number": customer.eil_document_number or "-",
 			"country": customer.eil_country_code or settings_country or "IDN",
