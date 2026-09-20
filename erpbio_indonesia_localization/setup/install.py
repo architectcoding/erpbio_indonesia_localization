@@ -45,6 +45,13 @@ CUSTOM_FIELDS = {
 			"depends_on": "eval:['Passport','Other'].includes(doc.eil_id_type)",
 		},
 		{
+			"fieldname": "eil_tax_name",
+			"label": "Tax Name (Nama Wajib Pajak)",
+			"fieldtype": "Data",
+			"insert_after": "eil_document_number",
+			"description": "The registered name exactly as it appears on the Faktur Pajak (KTP name for an individual). Goes out as BuyerName; blank = the Customer Name.",
+		},
+		{
 			"fieldname": "eil_tax_col",
 			"fieldtype": "Column Break",
 			"insert_after": "eil_document_number",
@@ -297,6 +304,13 @@ CUSTOM_FIELDS = {
 			"allow_on_submit": 1,
 			"description": "Populated from the template, then editable per invoice. A row with a rate recomputes its amount from the net total; a row with no rate keeps the amount you type. Carved out of the receivable by the reclassification entry, never added to the totals.",
 		},
+		{
+			"fieldname": "eil_tax_name",
+			"label": "Tax Name (Nama Wajib Pajak)",
+			"fieldtype": "Data",
+			"insert_after": "tax_id",
+			"description": "Registered name for the Faktur Pajak on THIS document. Blank = the Customer's Tax Name, else the Customer Name.",
+		},
 	],
 	# Government (pemungut/WAPU) sales. The flag travels with the document so a
 	# sales user only ever answers "is this a government customer?"; the charges
@@ -308,6 +322,13 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Check",
 			"insert_after": "taxes_and_charges",
 			"description": "The buyer deposits the PPN itself and withholds PPh 22. Defaults from the customer; the accountant applies the actual charges on the invoice.",
+		},
+		{
+			"fieldname": "eil_tax_name",
+			"label": "Tax Name (Nama Wajib Pajak)",
+			"fieldtype": "Data",
+			"insert_after": "tax_id",
+			"description": "Registered name for the Faktur Pajak on THIS document. Blank = the Customer's Tax Name, else the Customer Name.",
 		},
 	],
 	# The government treatment lives on the SAME master the sales team already
@@ -402,6 +423,24 @@ CUSTOM_FIELDS = {
 			"deductions; Excluded is left out entirely. Blank means earnings count as Teratur and "
 			"deductions are ignored. Gaji and Teratur are taxed identically — they differ only in "
 			"which line of the annual certificate they print on.",
+		},
+	],
+	"Quotation": [
+		{
+			"fieldname": "eil_tax_name",
+			"label": "Tax Name (Nama Wajib Pajak)",
+			"fieldtype": "Data",
+			"insert_after": "tax_id",
+			"description": "Registered name for the Faktur Pajak on THIS document. Blank = the Customer's Tax Name, else the Customer Name.",
+		},
+	],
+	"Delivery Note": [
+		{
+			"fieldname": "eil_tax_name",
+			"label": "Tax Name (Nama Wajib Pajak)",
+			"fieldtype": "Data",
+			"insert_after": "tax_id",
+			"description": "Registered name for the Faktur Pajak on THIS document. Blank = the Customer's Tax Name, else the Customer Name.",
 		},
 	],
 }

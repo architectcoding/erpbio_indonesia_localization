@@ -401,7 +401,7 @@ class CoretaxFakturExport(Document):
 					buyer["id_type"],
 					buyer["country"],
 					buyer["document_number"],
-					si.customer_name or si.customer,
+					buyer["name"],
 					_strip_html(si.address_display) or "-",
 					buyer["email"],
 					buyer["idtku"],
@@ -495,7 +495,7 @@ class CoretaxFakturExport(Document):
 			ET.SubElement(inv, "BuyerDocument").text = buyer["id_type"]
 			ET.SubElement(inv, "BuyerCountry").text = buyer["country"]
 			ET.SubElement(inv, "BuyerDocumentNumber").text = buyer["document_number"]
-			ET.SubElement(inv, "BuyerName").text = si.customer_name or si.customer
+			ET.SubElement(inv, "BuyerName").text = buyer["name"]
 			# sic: the DJP schema spells it "BuyerAdress"
 			ET.SubElement(inv, "BuyerAdress").text = _strip_html(si.address_display) or "-"
 			ET.SubElement(inv, "BuyerEmail").text = buyer["email"]
@@ -537,13 +537,17 @@ class CoretaxFakturExport(Document):
 		customer = frappe.db.get_value(
 			"Customer",
 			si.customer,
-			["tax_id", "eil_id_type", "eil_document_number", "eil_nitku", "eil_tax_email", "eil_country_code"],
+			["tax_id", "eil_id_type", "eil_document_number", "eil_nitku", "eil_tax_email", "eil_country_code", "eil_tax_name"],
 			as_dict=True,
 		) or frappe._dict()
 		settings_country = frappe.db.get_single_value("Indonesia Tax Settings", "default_buyer_country")
 		npwp = _digits(si.tax_id or customer.tax_id)
 		return {
 			"npwp": npwp,
+			# The registered name, not the trading name the reps use: "RS Columbia Asia
+			# Semarang" is BELEFINA SARANA MEDIKA to the tax office. The document may
+			# override the customer (a faktur issued to the payer's institution).
+			"name": si.get("eil_tax_name") or customer.eil_tax_name or si.customer_name or si.customer,
 			"id_type": customer.eil_id_type or "TIN",
 			"document_number": customer.eil_document_number or "-",
 			"country": customer.eil_country_code or settings_country or "IDN",

@@ -848,6 +848,19 @@ class TestBuyerIdentity(_ExportCase):
 		export = self._export()
 		self.assertNotEqual(export._seller_idtku(), "000000")
 
+	def test_buyer_name_is_the_registered_name_not_the_trading_name(self):
+		"""A customer is "RS Columbia Asia Semarang" to the reps and BELEFINA SARANA
+		MEDIKA to the tax office. The faktur carries the latter when it is on file,
+		and the document may name a different registered buyer still."""
+		si = self._invoice([(self.goods, 1, 1_000_000, "Unit")], template=self.template_ppn)
+		export = self._export()
+		self.assertEqual(export._buyer_bits(si)["name"], si.customer_name)  # nothing on file: the customer name
+		frappe.db.set_value("Customer", self.buyer, "eil_tax_name", "BELEFINA SARANA MEDIKA", update_modified=False)
+		self.addCleanup(frappe.db.set_value, "Customer", self.buyer, "eil_tax_name", None, update_modified=False)
+		self.assertEqual(export._buyer_bits(si)["name"], "BELEFINA SARANA MEDIKA")
+		si.eil_tax_name = "YAYASAN PEMBAYAR LAIN"  # the document overrides the customer
+		self.assertEqual(export._buyer_bits(si)["name"], "YAYASAN PEMBAYAR LAIN")
+
 
 # ===========================================================================
 # Item classification
