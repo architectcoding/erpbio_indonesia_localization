@@ -31,7 +31,10 @@ DOCTYPE = "Tax Document Reading"
 # --- settings ---------------------------------------------------------------------
 
 def _flag(fieldname, default=True):
-	value = frappe.db.get_single_value("Indonesia Tax Settings", fieldname)
+	"""A Check on the settings that is ON until someone turns it off. Read raw on purpose:
+	get_single_value casts a missing row to 0, which would read a never-saved settings
+	doc (every site on the day the field arrived) as "switched off"."""
+	value = frappe.db.get_value("Singles", {"doctype": "Indonesia Tax Settings", "field": fieldname}, "value")
 	return default if value is None else bool(int(value))
 
 
