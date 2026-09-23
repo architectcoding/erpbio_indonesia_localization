@@ -53,11 +53,13 @@ class TestSupplierTaxIdentity(FrappeTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.supplier = frappe.get_all("Supplier", pluck="name", limit=1, order_by="name")[0]
+		# a domestic supplier: the NPWP rules below do not apply to a foreign one
+		frappe.db.set_value("Supplier", cls.supplier, "country", "Indonesia")
 
 	def test_list_reports_status_and_sortable_columns(self):
 		page = tax.list_suppliers(page_length=5)
 		self.assertIn("supplier_name", page["sortable"])
-		self.assertTrue(all(r["tax_status"] in ("Ready", "Incomplete", "Blocked") for r in page["items"]))
+		self.assertTrue(all(r["tax_status"] in ("Ready", "Incomplete", "Blocked", "Foreign") for r in page["items"]))
 
 	def test_save_writes_the_identity_and_refuses_a_short_npwp(self):
 		out = tax.save_supplier_tax(frappe.as_json({"name": self.supplier, "tax_id": "0123456789012340",
@@ -70,3 +72,33 @@ class TestSupplierTaxIdentity(FrappeTestCase):
 	def test_missing_npwp_filter(self):
 		missing = tax.supplier_tax_summary(filters=frappe.as_json([{"field": "missing_tax_id", "value": "1"}]))
 		self.assertEqual(missing["total"], missing["Blocked"])
+
+
+class TestForeignSupplier(FrappeTestCase):
+	"""A supplier outside Indonesia has no NPWP to collect -- it must not read as
+	Blocked or swell the "without NPWP" count, whatever group it is filed under."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.supplier = frappe.get_all("Supplier", pluck="name", limit=1, order_by="name")[0]
+		frappe.db.set_value("Supplier", cls.supplier, {"country": "Germany", "tax_id": None})
+
+	def test_reads_foreign_not_blocked(self):
+		out = tax.get_supplier_tax(self.supplier)
+		self.assertEqual(out["tax_status"], "Foreign")
+
+	def test_not_counted_or_listed_as_missing(self):
+		missing = frappe.as_json([{"field": "missing_tax_id", "value": "1"}])
+		names = [r["name"] for r in tax.list_suppliers(filters=missing, page_length=500)["items"]]
+		self.assertNotIn(self.supplier, names)
+		self.assertGreaterEqual(tax.supplier_tax_summary()["Foreign"], 1)
+
+	def test_its_own_tin_is_not_held_to_npwp_length(self):
+		out = tax.save_supplier_tax(frappe.as_json({"name": self.supplier, "tax_id": "DE 123456789"}))
+		self.assertEqual(out["tax_status"], "Foreign")
+
+	def test_a_blank_country_stays_domestic(self):
+		frappe.db.set_value("Supplier", self.supplier, "country", None)
+		self.assertEqual(tax.get_supplier_tax(self.supplier)["tax_status"], "Blocked")
+		frappe.db.set_value("Supplier", self.supplier, "country", "Germany")

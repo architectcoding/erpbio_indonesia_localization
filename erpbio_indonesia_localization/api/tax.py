@@ -1299,12 +1299,23 @@ def save_customer_tax(payload):
 # what PPN Masukan shows beside each faktur. Supplier has no ID-type field, so a
 # 16-digit number reads as NPWP16 (which is also how a NIK is registered now).
 SUPPLIER_TAX_FIELDS = ("tax_id", "eil_tax_name", "eil_tax_address")
-SUPPLIER_LIST_FIELDS = ("name", "supplier_name", "supplier_group", "supplier_type", "disabled") + SUPPLIER_TAX_FIELDS
-SUPPLIER_FILTER_FIELDS = {"name", "supplier_name", "supplier_group", "supplier_type", "disabled"}
-SUPPLIER_ORDER_FIELDS = {"name", "supplier_name", "supplier_group", "tax_id", "creation", "modified"}
+SUPPLIER_LIST_FIELDS = ("name", "supplier_name", "supplier_group", "supplier_type", "country", "disabled") + SUPPLIER_TAX_FIELDS
+SUPPLIER_FILTER_FIELDS = {"name", "supplier_name", "supplier_group", "supplier_type", "country", "disabled"}
+SUPPLIER_ORDER_FIELDS = {"name", "supplier_name", "supplier_group", "country", "tax_id", "creation", "modified"}
+
+
+def _is_foreign(row):
+	"""A supplier whose country is set and is not Indonesia has no Indonesian NPWP
+	to give. Read from the supplier's own country, not its group: sites file
+	foreign suppliers under "International" and under "Intercompany" alike. A
+	blank country stays domestic -- the side that asks for an NPWP."""
+	country = (row.get("country") or "").strip()
+	return bool(country) and country != "Indonesia"
 
 
 def _supplier_status(row):
+	if _is_foreign(row):
+		return "Foreign", _("Foreign supplier — no Indonesian NPWP to collect")
 	digits = _digits(row.get("tax_id"))
 	if not digits:
 		return "Blocked", _("No NPWP — e-Bupot cannot report a withholding against this supplier")
@@ -1323,6 +1334,10 @@ def _supplier_filters(filters):
 	flt_list = to_getlist_filters(kept, SUPPLIER_FILTER_FIELDS)
 	if missing is not None:
 		flt_list.append(["tax_id", "is", "not set" if missing else "set"])
+		if missing:
+			# "Missing" means an NPWP we should have: a foreign supplier is not
+			# missing one. "" keeps a blank country in (Frappe IFNULLs an `in`).
+			flt_list.append(["country", "in", ["Indonesia", ""]])
 	return flt_list
 
 
@@ -1354,9 +1369,9 @@ def list_suppliers(txt=None, filters=None, order_by=None, start=0, page_length=2
 def supplier_tax_summary(filters=None):
 	_check("Supplier")
 	rows = frappe.get_list(
-		"Supplier", filters=_supplier_filters(filters), fields=["tax_id"], page_length=0
+		"Supplier", filters=_supplier_filters(filters), fields=["tax_id", "country"], page_length=0
 	)
-	out = {"total": len(rows), "Ready": 0, "Incomplete": 0, "Blocked": 0}
+	out = {"total": len(rows), "Ready": 0, "Incomplete": 0, "Blocked": 0, "Foreign": 0}
 	for r in rows:
 		out[_supplier_status(r)[0]] += 1
 	return out
@@ -1390,7 +1405,8 @@ def save_supplier_tax(payload):
 	for field in _present("Supplier", SUPPLIER_TAX_FIELDS):
 		if field in payload:
 			doc.set(field, (payload[field] or "").strip() or None)
-	if doc.tax_id != before:
+	# A foreign supplier's number is its own country's TIN, not a 15/16-digit NPWP.
+	if doc.tax_id != before and not _is_foreign(doc):
 		_check_number("TIN", doc.tax_id)
 	doc.save()
 	return get_supplier_tax(name)

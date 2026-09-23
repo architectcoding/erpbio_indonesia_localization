@@ -1341,3 +1341,21 @@ msgstr "{0} di antaranya belum memiliki status PTKP dan akan menghentikan proses
 
 msgid "App Name & Icon"
 msgstr "Nama & Ikon Aplikasi"
+
+msgid "Foreign"
+msgstr "Luar Negeri"
+
+msgid "{0} foreign"
+msgstr "{0} luar negeri"
+
+msgid "Foreign supplier — no Indonesian NPWP to collect"
+msgstr "Pemasok luar negeri — tidak ada NPWP Indonesia yang perlu dikumpulkan"
+
+msgid "Suppliers outside Indonesia have no NPWP to collect"
+msgstr "Pemasok di luar Indonesia tidak memiliki NPWP untuk dikumpulkan"
+
+msgid "Tax ID (own country)"
+msgstr "Nomor Pajak (negara asal)"
+
+msgid "Optional — the supplier's own tax number, as on its invoices."
+msgstr "Opsional — nomor pajak pemasok di negaranya, sesuai fakturnya."
