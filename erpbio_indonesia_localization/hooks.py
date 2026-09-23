@@ -38,6 +38,11 @@ doc_events = {
 		# attached_to_* set; the SPA path attaches after upload and reaches the same
 		# reader through erpbio_general's `erpbio_files_attached` hook below.
 		"after_insert": "erpbio_indonesia_localization.api.tax_ocr.on_file_after_insert",
+		# A reading links its File, so without this a document that was ever read
+		# could not be removed ("File is linked with Tax Document Reading"). Its own
+		# module on purpose: a web worker still holding the old tax_ocr would not find
+		# the function there and fail EVERY file removal until the restart.
+		"on_trash": "erpbio_indonesia_localization.api.tax_document_files.on_file_trash",
 	},
 	"Payment Entry": {
 		# WAPU/Bendahara: auto-clear Piutang PPN Bendahara on receipts against

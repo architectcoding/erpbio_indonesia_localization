@@ -176,3 +176,14 @@ class TestTaxDocumentReading(_TestCase):
 			tax_ocr.readings("Customer", CUSTOMER)
 		with self.assertRaises(frappe.PermissionError):
 			tax_ocr.apply(r.name)
+
+	def test_a_document_that_was_read_can_still_be_removed(self):
+		# not force=True (which skips the link check, as the cleanup does): the panel's remove button
+		r = self._attach(NEW_CARD)
+		frappe.delete_doc("File", r.file, ignore_permissions=True)
+		self.assertFalse(frappe.db.exists("File", r.file))
+		self.assertFalse(frappe.db.exists("Tax Document Reading", r.name))
+		# what it already filled stays on the customer
+		self.assertEqual(self._customer().tax_id, "0708958483428001")
+		# and a job still queued for it finds nothing to do rather than failing
+		tax_ocr.run_reading(r.name)

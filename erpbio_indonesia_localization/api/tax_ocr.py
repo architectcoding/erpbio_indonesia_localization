@@ -139,6 +139,8 @@ def queue_reading(party_type, party, file_row, manual=False):
 
 def run_reading(reading):
 	"""The background job: acquire text, parse, apply the blank-field rule, tell the uploader."""
+	if not frappe.db.exists(DOCTYPE, reading):
+		return  # its file was removed while the job waited in the queue
 	doc = frappe.get_doc(DOCTYPE, reading)
 	try:
 		path = frappe.get_doc("File", doc.file).get_full_path()
