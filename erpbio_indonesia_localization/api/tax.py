@@ -1089,10 +1089,31 @@ CUSTOMER_TAX_FIELDS = (
 	"eil_tax_email",
 	"eil_country_code",
 	"eil_is_pemungut",
+	"eil_tax_name",
+	"eil_tax_address",
 )
 CUSTOMER_LIST_FIELDS = ("name", "customer_name", "customer_group", "customer_type", "disabled") + CUSTOMER_TAX_FIELDS
 CUSTOMER_FILTER_FIELDS = {"name", "customer_name", "customer_group", "eil_id_type", "eil_is_pemungut", "disabled"}
 CUSTOMER_ORDER_FIELDS = {"name", "customer_name", "customer_group", "eil_id_type", "tax_id", "creation", "modified"}
+
+
+def _present(doctype, fields):
+	"""The fields this site actually has. The eil_* custom fields arrive with a
+	migrate; a site that has not run one yet must still list its customers."""
+	meta = frappe.get_meta(doctype)
+	return [f for f in fields if f in ("name",) or meta.has_field(f) or f in frappe.model.default_fields]
+
+
+def _check_number(id_type, tax_id):
+	"""A NIK is 16 digits; an NPWP 15 (old) or 16. Checked only when a number is
+	given, so a party still waiting for their card can be saved without one."""
+	if not tax_id or id_type not in ("TIN", "NIK"):
+		return
+	digits = _digits(tax_id)
+	if id_type == "NIK" and len(digits) != 16:
+		frappe.throw(_("A NIK has 16 digits; this one has {0}.").format(len(digits)))
+	if id_type == "TIN" and len(digits) not in (15, 16):
+		frappe.throw(_("An NPWP has 15 or 16 digits; this one has {0}.").format(len(digits)))
 
 
 def _digits(value):
@@ -1123,6 +1144,14 @@ def _tax_status(row, pemungut_groups):
 		return "Blocked", _("No NPWP/NIK — the faktur cannot be exported")
 	if id_type in ("Passport", "Other") and not (row.get("eil_document_number") or "").strip():
 		return "Incomplete", _("No document number — the faktur would send \"-\"")
+	# Advisory, like the rest of Incomplete: the export sends the number as
+	# typed and Coretax is what refuses it -- a Tax ID holding a company name
+	# used to read "Ready" here.
+	digits = _digits(row.get("tax_id"))
+	if id_type == "NIK" and len(digits) != 16:
+		return "Incomplete", _("The NIK has {0} digits; a NIK has 16").format(len(digits))
+	if id_type == "TIN" and len(digits) not in (15, 16):
+		return "Incomplete", _("The NPWP has {0} digits; an NPWP has 15 or 16").format(len(digits))
 	return "Ready", _("Ready")
 
 
@@ -1171,7 +1200,7 @@ def list_customers(txt=None, filters=None, order_by=None, start=0, page_length=2
 		"Customer",
 		filters=flt_list,
 		or_filters=or_filters,
-		fields=list(CUSTOMER_LIST_FIELDS),
+		fields=_present("Customer", CUSTOMER_LIST_FIELDS),
 		order_by=resolve_order_by(order_by, CUSTOMER_ORDER_FIELDS, "customer_name asc"),
 		start=int(start),
 		page_length=int(page_length) + 1,
@@ -1198,7 +1227,7 @@ def customer_tax_summary(filters=None):
 	Deliberately unpaginated: the point is the size of the backlog."""
 	_check("Customer")
 	flt_list = _customer_filters(filters)
-	rows = frappe.get_list("Customer", filters=flt_list, fields=list(CUSTOMER_LIST_FIELDS), page_length=0)
+	rows = frappe.get_list("Customer", filters=flt_list, fields=_present("Customer", CUSTOMER_LIST_FIELDS), page_length=0)
 	groups = _pemungut_groups()
 	out = {"total": len(rows), "Ready": 0, "Incomplete": 0, "Blocked": 0, "pemungut": 0}
 	for r in rows:
@@ -1212,7 +1241,7 @@ def customer_tax_summary(filters=None):
 @frappe.whitelist()
 def get_customer_tax(name):
 	_check("Customer", name=name)
-	row = frappe.db.get_value("Customer", name, list(CUSTOMER_LIST_FIELDS), as_dict=True)
+	row = frappe.db.get_value("Customer", name, _present("Customer", CUSTOMER_LIST_FIELDS), as_dict=True)
 	if not row:
 		frappe.throw(_("Customer {0} not found.").format(name))
 	groups = _pemungut_groups()
@@ -1235,8 +1264,12 @@ def get_customer_tax(name):
 			"country": row.get("eil_country_code") or default_country,
 			"email": row.get("eil_tax_email") or "",
 			"idtku": _digits(row.get("eil_nitku")) or (npwp + "000000" if npwp else ""),
+			# BuyerName / BuyerAdress: the registered values, else what each
+			# invoice carries (its customer name / billing address).
+			"name": row.get("eil_tax_name") or row.get("customer_name") or name,
+			"address": " ".join((row.get("eil_tax_address") or "").split()),
 		},
-		"can_write": frappe.has_permission("Customer", "write"),
+		"can_write": frappe.has_permission("Customer", "write", doc=name),
 	}
 
 
@@ -1250,11 +1283,118 @@ def save_customer_tax(payload):
 		frappe.throw(_("Customer is required."))
 	_check("Customer", "write", name)
 	doc = frappe.get_doc("Customer", name)
-	for field in CUSTOMER_TAX_FIELDS:
+	before = (doc.tax_id, doc.get("eil_id_type"))
+	for field in _present("Customer", CUSTOMER_TAX_FIELDS):
 		if field in payload:
 			doc.set(field, payload[field])
+	# Only a number (or its type) being changed is checked: an old, malformed
+	# Tax ID must not stop someone correcting the address beside it.
+	if (doc.tax_id, doc.get("eil_id_type")) != before:
+		_check_number(doc.get("eil_id_type") or "TIN", doc.tax_id)
 	doc.save()
 	return get_customer_tax(name)
+
+# ------------------------------------------------------------------ suppliers
+# A supplier's tax identity is what e-Bupot reports a withholding against and
+# what PPN Masukan shows beside each faktur. Supplier has no ID-type field, so a
+# 16-digit number reads as NPWP16 (which is also how a NIK is registered now).
+SUPPLIER_TAX_FIELDS = ("tax_id", "eil_tax_name", "eil_tax_address")
+SUPPLIER_LIST_FIELDS = ("name", "supplier_name", "supplier_group", "supplier_type", "disabled") + SUPPLIER_TAX_FIELDS
+SUPPLIER_FILTER_FIELDS = {"name", "supplier_name", "supplier_group", "supplier_type", "disabled"}
+SUPPLIER_ORDER_FIELDS = {"name", "supplier_name", "supplier_group", "tax_id", "creation", "modified"}
+
+
+def _supplier_status(row):
+	digits = _digits(row.get("tax_id"))
+	if not digits:
+		return "Blocked", _("No NPWP — e-Bupot cannot report a withholding against this supplier")
+	if len(digits) not in (15, 16):
+		return "Incomplete", _("The NPWP has {0} digits; an NPWP has 15 or 16").format(len(digits))
+	return "Ready", _("Ready")
+
+
+def _supplier_filters(filters):
+	kept, missing = [], None
+	for f in frappe.parse_json(filters) if isinstance(filters, str) else (filters or []):
+		if f.get("field") == "missing_tax_id":
+			missing = str(f.get("value") or "").lower() in ("1", "yes", "true")
+			continue
+		kept.append(f)
+	flt_list = to_getlist_filters(kept, SUPPLIER_FILTER_FIELDS)
+	if missing is not None:
+		flt_list.append(["tax_id", "is", "not set" if missing else "set"])
+	return flt_list
+
+
+@frappe.whitelist()
+def list_suppliers(txt=None, filters=None, order_by=None, start=0, page_length=20):
+	"""Suppliers with their tax identity, for the shared ListView."""
+	_check("Supplier")
+	flt_list = _supplier_filters(filters)
+	or_filters = (
+		{"name": ["like", f"%{txt}%"], "supplier_name": ["like", f"%{txt}%"], "tax_id": ["like", f"%{txt}%"]}
+		if txt
+		else None
+	)
+	rows = frappe.get_list(
+		"Supplier",
+		filters=flt_list,
+		or_filters=or_filters,
+		fields=_present("Supplier", SUPPLIER_LIST_FIELDS),
+		order_by=resolve_order_by(order_by, SUPPLIER_ORDER_FIELDS, "supplier_name asc"),
+		start=int(start),
+		page_length=int(page_length) + 1,
+	)
+	for r in rows:
+		r["tax_status"], r["tax_message"] = _supplier_status(r)
+	return _page(rows, page_length, capped_total("Supplier", filters=flt_list, or_filters=or_filters))
+
+
+@frappe.whitelist()
+def supplier_tax_summary(filters=None):
+	_check("Supplier")
+	rows = frappe.get_list(
+		"Supplier", filters=_supplier_filters(filters), fields=["tax_id"], page_length=0
+	)
+	out = {"total": len(rows), "Ready": 0, "Incomplete": 0, "Blocked": 0}
+	for r in rows:
+		out[_supplier_status(r)[0]] += 1
+	return out
+
+
+@frappe.whitelist()
+def get_supplier_tax(name):
+	_check("Supplier", name=name)
+	row = frappe.db.get_value("Supplier", name, _present("Supplier", SUPPLIER_LIST_FIELDS), as_dict=True)
+	if not row:
+		frappe.throw(_("Supplier {0} not found.").format(name))
+	status, message = _supplier_status(row)
+	return {
+		"doc": row,
+		"tax_status": status,
+		"tax_message": message,
+		"can_write": frappe.has_permission("Supplier", "write", doc=name),
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+def save_supplier_tax(payload):
+	"""Write only the supplier's tax identity."""
+	payload = frappe.parse_json(payload)
+	name = payload.get("name")
+	if not name:
+		frappe.throw(_("Supplier is required."))
+	_check("Supplier", "write", name)
+	doc = frappe.get_doc("Supplier", name)
+	before = doc.tax_id
+	for field in _present("Supplier", SUPPLIER_TAX_FIELDS):
+		if field in payload:
+			doc.set(field, (payload[field] or "").strip() or None)
+	if doc.tax_id != before:
+		_check_number("TIN", doc.tax_id)
+	doc.save()
+	return get_supplier_tax(name)
+
 
 
 # --------------------------------------------------------------- app selector

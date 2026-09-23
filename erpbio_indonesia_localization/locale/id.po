@@ -1152,3 +1152,63 @@ msgstr "{0} perlu dilaporkan"
 
 msgid "{0} withheld"
 msgstr "{0} dipotong"
+
+msgid "15 or 16 digits; punctuation is fine."
+msgstr "15 atau 16 digit; tanda baca tidak masalah."
+
+msgid "As printed on the supplier's Faktur Pajak."
+msgstr "Sesuai yang tercetak pada Faktur Pajak pemasok."
+
+msgid "As registered with the tax office. Blank = each invoice's billing address."
+msgstr "Sesuai yang terdaftar di kantor pajak. Kosong = alamat penagihan pada tiap faktur."
+
+msgid "Each invoice's billing address"
+msgstr "Alamat penagihan pada tiap faktur"
+
+msgid "Missing NPWP"
+msgstr "Tanpa NPWP"
+
+msgid "No NPWP"
+msgstr "Tidak ada NPWP"
+
+msgid "No NPWP — e-Bupot cannot report a withholding against this supplier"
+msgstr "Tidak ada NPWP — e-Bupot tidak dapat melaporkan pemotongan atas pemasok ini"
+
+msgid "Supplier Tax Identity"
+msgstr "Identitas Pajak Pemasok"
+
+msgid "Supplier Type"
+msgstr "Jenis Pemasok"
+
+msgid "Supplier is required."
+msgstr "Pemasok wajib diisi."
+
+msgid "Supplier {0} not found."
+msgstr "Pemasok {0} tidak ditemukan."
+
+msgid "The NIK has {0} digits; a NIK has 16"
+msgstr "NIK ini memiliki {0} digit; NIK terdiri dari 16 digit"
+
+msgid "The NPWP has {0} digits; an NPWP has 15 or 16"
+msgstr "NPWP ini memiliki {0} digit; NPWP terdiri dari 15 atau 16 digit"
+
+msgid "The registered name, as on the NPWP card — usually without the \"PT\". Blank = the customer name."
+msgstr "Nama terdaftar, sesuai kartu NPWP — biasanya tanpa \"PT\". Kosong = nama pelanggan."
+
+msgid "These tables do not pass their own structural checks yet:<br>{0}"
+msgstr "Tabel ini belum lolos pemeriksaan strukturnya sendiri:<br>{0}"
+
+msgid "This invoice is cancelled."
+msgstr "Faktur penjualan ini sudah dibatalkan."
+
+msgid "You can view this supplier's tax identity but not change it — that needs write access to Supplier."
+msgstr "Anda dapat melihat identitas pajak pemasok ini tetapi tidak dapat mengubahnya — perlu hak tulis pada Pemasok."
+
+msgid "{0} without NPWP"
+msgstr "{0} tanpa NPWP"
+
+msgid "A NIK has 16 digits; this one has {0}."
+msgstr "NIK terdiri dari 16 digit; yang ini {0} digit."
+
+msgid "An NPWP has 15 or 16 digits; this one has {0}."
+msgstr "NPWP terdiri dari 15 atau 16 digit; yang ini {0} digit."
