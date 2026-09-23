@@ -60,12 +60,3 @@ jspm_packages
 
 # Aider AI Chat
 .aider*
-
-# NOTE: unlike erpbio_general, the compiled tax SPA under
-# erpbio_indonesia_localization/public/tax/ is deliberately TRACKED and must
-# stay that way. erpbio_indonesia_localization/www/erpbio_tax.html references
-# the hashed build filenames directly (e.g. assets/index-<hash>.js), so the
-# built output has to ship with the repo -- deploys do not run a frontend
-# build step for this app. Source lives in tax-frontend/ and is rebuilt with
-# `yarn build` there (vite outDir points at public/tax). Do not add an ignore
-# rule for public/tax/.

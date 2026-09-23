@@ -12,11 +12,11 @@ app_license = "mit"
 # regional_overrides extension point below -- that hook names an hrms.* dotted
 # path, so the app cannot function without it.
 #
-# erpbio_general is deliberately NOT listed. The tax SPA builds against that
-# app's spa-shared component library (see tax-frontend/vite.config.js), but that
-# is a BUILD-time dependency only: public/tax/ ships pre-built, and every shared
-# component used here degrades gracefully when erpbio_general's endpoints are
-# absent. So this app still installs and runs on bare ERPNext + HRMS.
+# erpbio_general is deliberately NOT listed: everything in this app -- the
+# doctypes, the Coretax export/import, WAPU, PPh 21 and the Desk reports --
+# runs on bare ERPNext + HRMS. The /erpbio-tax SPA over it is erpbio_general's
+# (its tax-frontend/, moved there 2026-09-23) and exists only where both apps
+# are installed; api/tax.py is the API it calls.
 required_apps = ["erpnext", "hrms"]
 
 # Installation
@@ -92,12 +92,6 @@ regional_overrides = {
 erpbio_files_attached = ["erpbio_indonesia_localization.api.tax_ocr.on_files_attached"]
 # erpbio_general: the Tax Identity card asks whether a tax-document reader exists here.
 erpbio_tax_document_ocr = ["erpbio_indonesia_localization.api.tax_ocr.status"]
-
-# /erpbio-tax SPA (tax-frontend build served from www/erpbio_tax.html)
-website_route_rules = [
-	{"from_route": "/erpbio-tax", "to_route": "erpbio_tax"},
-	{"from_route": "/erpbio-tax/<path:app_path>", "to_route": "erpbio_tax"},
-]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
