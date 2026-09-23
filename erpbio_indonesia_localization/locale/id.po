@@ -1269,3 +1269,72 @@ msgstr "Akun Pemotongan"
 
 msgid "e-Faktur defaults, PPN rate and the government-buyer rules."
 msgstr "Bawaan e-Faktur, tarif PPN, dan aturan pembeli pemerintah."
+
+msgid "A deduction component that is NOT \"Variable Based On Taxable Salary\" — that flag hands the calculation to HRMS's annual slab engine, which cannot express TER."
+msgstr "Komponen potongan yang BUKAN \"Variable Based On Taxable Salary\" — tanda itu menyerahkan perhitungan ke mesin tarif tahunan HRMS, yang tidak dapat memakai TER."
+
+msgid "Calculate"
+msgstr "Hitung"
+
+msgid "Calculate PPh 21 on salary slips"
+msgstr "Hitung PPh 21 pada slip gaji"
+
+msgid "Choose the PPh 21 salary component before enabling PPh 21."
+msgstr "Pilih komponen gaji PPh 21 sebelum mengaktifkan PPh 21."
+
+msgid "Choose the PPh 21 salary component first."
+msgstr "Pilih komponen gaji PPh 21 terlebih dahulu."
+
+msgid "Could not calculate."
+msgstr "Tidak dapat menghitung."
+
+msgid "One ordinary month's withholding, from the tables below — the same calculation a salary slip uses."
+msgstr "Pemotongan satu bulan biasa, dari tabel di bawah — perhitungan yang sama dengan slip gaji."
+
+msgid "Only salary structures that carry the component below are affected."
+msgstr "Hanya struktur gaji yang memuat komponen di bawah yang terpengaruh."
+
+msgid "PPh 21 Salary Component"
+msgstr "Komponen Gaji PPh 21"
+
+msgid "PPh 21 Setup"
+msgstr "Pengaturan PPh 21"
+
+msgid "Preview only — the tables are not verified yet, so a salary slip would refuse to compute."
+msgstr "Hanya pratinjau — tabel belum diverifikasi, sehingga slip gaji akan menolak menghitung."
+
+msgid "Recorded. Switch PPh 21 on below when payroll should start withholding it."
+msgstr "Tercatat. Aktifkan PPh 21 di bawah saat penggajian mulai memotongnya."
+
+msgid "Switched off by {0} on {1}."
+msgstr "Dinonaktifkan oleh {0} pada {1}."
+
+msgid "Switched on by {0} on {1}."
+msgstr "Diaktifkan oleh {0} pada {1}."
+
+msgid "TER {0} at {1}%"
+msgstr "TER {0} sebesar {1}%"
+
+msgid "Try a salary"
+msgstr "Coba hitung gaji"
+
+msgid "Verification withdrawn by {0} on {1}."
+msgstr "Verifikasi dicabut oleh {0} pada {1}."
+
+msgid "Verified by {0} on {1}."
+msgstr "Diverifikasi oleh {0} pada {1}."
+
+msgid "Verify the rate tables above first."
+msgstr "Verifikasi tabel tarif di atas terlebih dahulu."
+
+msgid "Verify the rate tables before enabling PPh 21 — until then every salary slip carrying the component would refuse to compute."
+msgstr "Verifikasi tabel tarif sebelum mengaktifkan PPh 21 — sampai saat itu setiap slip gaji yang memuat komponen ini akan menolak menghitung."
+
+msgid "{0} employees are on a salary structure carrying PPh 21."
+msgstr "{0} karyawan berada pada struktur gaji yang memuat PPh 21."
+
+msgid "{0} is flagged “Variable Based On Taxable Salary”, which hands the calculation to HRMS's annual slab engine — that cannot express TER. Choose a component without it."
+msgstr "{0} ditandai “Variable Based On Taxable Salary”, yang menyerahkan perhitungan ke mesin tarif tahunan HRMS — tidak dapat memakai TER. Pilih komponen tanpa tanda itu."
+
+msgid "{0} of them have no PTKP status and would stop a payroll run."
+msgstr "{0} di antaranya belum memiliki status PTKP dan akan menghentikan proses penggajian."

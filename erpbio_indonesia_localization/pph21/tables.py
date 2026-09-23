@@ -11,6 +11,8 @@ throws until an administrator has ticked the gate in EIL PPh 21 Settings. A
 blocked payroll run is a far better failure than a silently wrong withholding.
 """
 
+from contextlib import contextmanager
+
 import frappe
 from frappe import _
 from frappe.utils import flt, getdate, nowdate
@@ -159,7 +161,23 @@ def ptkp_breakdown(status, on_date=None):
 
 
 # ------------------------------------------------------------------ the gate
+@contextmanager
+def preview_unverified():
+	"""Let a read-only preview compute before the gate is ticked: reading an
+	answer against the regulation's worked examples is part of checking the
+	tables, so refusing it would make the gate harder to open honestly. Scoped to
+	the current request and restored on exit; payroll never enters it."""
+	previous = getattr(frappe.local, "_eil_pph21_preview", False)
+	frappe.local._eil_pph21_preview = True
+	try:
+		yield
+	finally:
+		frappe.local._eil_pph21_preview = previous
+
+
 def require_verified_tables():
+	if getattr(frappe.local, "_eil_pph21_preview", False):
+		return
 	settings = frappe.get_cached_doc("EIL PPh 21 Settings")
 	if not settings.tables_verified:
 		frappe.throw(

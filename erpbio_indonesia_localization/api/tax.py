@@ -1466,6 +1466,76 @@ def get_pph21_tables():
 		# its source, and the reader should see that before ticking anything.
 		"problems": pph21_tables.validate_tables(),
 		"can_write": frappe.has_permission("EIL PPh 21 Settings", "write"),
+		# Who said the tables match the regulation, and who switched PPh 21 on --
+		# an attestation is only worth something with a name and a date on it.
+		"verified_change": _pph21_last_change("tables_verified"),
+		"enabled_change": _pph21_last_change("enabled"),
+		"employees": _pph21_employee_counts(),
+	}
+
+
+def _pph21_last_change(field):
+	"""The newest Version row that changed `field` on EIL PPh 21 Settings."""
+	for v in frappe.get_all(
+		"Version",
+		filters={"ref_doctype": "EIL PPh 21 Settings", "docname": "EIL PPh 21 Settings"},
+		fields=["owner", "creation", "data"],
+		order_by="creation desc",
+		limit=100,
+	):
+		for row in (frappe.parse_json(v.data or "{}") or {}).get("changed") or []:
+			if row and row[0] == field:
+				return {"by": frappe.utils.get_fullname(v.owner), "on": str(v.creation), "value": cint(row[2])}
+	return None
+
+
+def _pph21_employee_counts():
+	"""The readiness numbers the Employees list shows, for the page's enable
+	switch -- skipped quietly for someone who cannot read Employee."""
+	try:
+		return employee_pph21_summary()
+	except frappe.PermissionError:
+		frappe.clear_last_message()
+		return None
+
+
+PPH21_SETTING_FIELDS = ("enabled", "pph21_component", "biaya_jabatan_percent", "biaya_jabatan_monthly_cap")
+
+
+@frappe.whitelist(methods=["POST"])
+def save_pph21_settings(values):
+	"""The PPh 21 switches the tax app's page edits. Saved through the document,
+	so its validate -- component, verification and enabling rules -- applies."""
+	_check("EIL PPh 21 Settings", "write")
+	values = frappe.parse_json(values) or {}
+	s = frappe.get_single("EIL PPh 21 Settings")
+	for field in PPH21_SETTING_FIELDS:
+		if field in values:
+			s.set(field, values[field])
+	s.save(ignore_version=False)
+	frappe.clear_cache(doctype="EIL PPh 21 Settings")
+	return get_pph21_tables()
+
+
+@frappe.whitelist()
+def preview_pph21(ptkp_status, monthly_gross):
+	"""One ordinary month's withholding for a gross and PTKP status, from the
+	loaded tables -- the same calculator a salary slip uses, so reading the
+	answer against the regulation's own examples is how the tables get checked."""
+	_check("EIL PPh 21 Settings")
+	from erpbio_indonesia_localization.pph21 import calculator
+	from erpbio_indonesia_localization.pph21 import tables as pph21_tables
+
+	gross = flt(monthly_gross)
+	with pph21_tables.preview_unverified():
+		category = pph21_tables.ter_category(ptkp_status)
+		rate = flt(pph21_tables.ter_rate(category, gross))
+		withholding = flt(calculator.monthly_withholding(ptkp_status, gross))
+	return {
+		"category": category,
+		"rate": rate,
+		"withholding": withholding,
+		"verified": cint(frappe.db.get_single_value("EIL PPh 21 Settings", "tables_verified")),
 	}
 
 
@@ -1479,19 +1549,16 @@ def set_pph21_tables_verified(verified):
 	"""
 	_check("EIL PPh 21 Settings", "write")
 	verified = cint(verified)
-	if verified:
-		from erpbio_indonesia_localization.pph21 import tables as pph21_tables
-
-		problems = pph21_tables.validate_tables()
-		if problems:
-			frappe.throw(
-				_("These tables do not pass their own structural checks yet:<br>{0}").format(
-					"<br>".join(problems[:8])
-				)
-			)
-	frappe.db.set_single_value("EIL PPh 21 Settings", "tables_verified", verified)
+	# Saved through the document, not db.set_single_value: its validate refuses
+	# tables that fail their own checks (on every path, not just this one), and
+	# track_changes records who attested and when.
+	s = frappe.get_single("EIL PPh 21 Settings")
+	s.tables_verified = verified
+	# Explicit: the Version row IS the audit trail (Frappe skips it under tests
+	# by default, which would hide a regression here).
+	s.save(ignore_version=False)
 	frappe.clear_cache(doctype="EIL PPh 21 Settings")
-	return {"tables_verified": verified}
+	return {"tables_verified": verified, "verified_change": _pph21_last_change("tables_verified")}
 
 
 # ------------------------------------------------------- PPh 21 employee setup
