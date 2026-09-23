@@ -1080,3 +1080,21 @@ msgstr "Bukan pihak"
 
 msgid "OCR engine not installed on this server (pip install rapidocr-onnxruntime)"
 msgstr "Mesin OCR belum terpasang di server ini (pip install rapidocr-onnxruntime)"
+
+msgid "Remove file"
+msgstr "Hapus berkas"
+
+msgid "Could not load this export."
+msgstr "Ekspor ini tidak dapat dimuat."
+
+msgid "Could not load this import."
+msgstr "Impor ini tidak dapat dimuat."
+
+msgid "Fetch invoices again"
+msgstr "Ambil faktur lagi"
+
+msgid "The {0} invoices listed are replaced by what the period holds now."
+msgstr "{0} faktur yang tercantum akan diganti dengan isi periode saat ini."
+
+msgid "Stamp the Coretax faktur number, date and status onto {0} matched Sales Invoices?"
+msgstr "Cantumkan nomor, tanggal, dan status faktur Coretax pada {0} Faktur Penjualan yang cocok?"

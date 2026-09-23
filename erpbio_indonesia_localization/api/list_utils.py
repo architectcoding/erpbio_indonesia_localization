@@ -3,8 +3,8 @@ Filter / sort / count helpers for this app's SPA list endpoints, so the shared
 ListView's panel filters, sortable headers and row counts have a backend to
 talk to.
 
-A trimmed copy of the equivalent in erpbio_general: this app is deliberately
-self-contained (clean-room MIT, installs without erpbio_general), so it
+A trimmed copy of the equivalent in erpbio_general: this app installs without
+erpbio_general (the SPA calling these lives there, the API stays here), so it
 carries its own rather than importing from there.
 """
 
@@ -45,12 +45,27 @@ def to_getlist_filters(filters, allowed_fields):
 def resolve_order_by(order_by, allowed, default):
 	"""Validate a client-supplied 'field dir' sort against an allowlist so the
 	sortable column headers can't inject arbitrary order_by SQL."""
+	# Remembered for list_meta(): ListView lets a header sort only when the
+	# server names it, so an allowlist nobody reports leaves every header inert.
+	frappe.local.spa_sortable = sorted(allowed)
 	if not order_by:
 		return default
 	parts = str(order_by).split()
 	field = parts[0]
 	direction = "desc" if len(parts) > 1 and parts[1].lower() == "desc" else "asc"
 	return f"{field} {direction}" if field in allowed else default
+
+
+def list_meta(**extra):
+	"""The sortable allowlist ListView reads from the top level of a list
+	response. Reads and CLEARS what resolve_order_by stashed, so a response never
+	reports another list's allowlist -- at worst [] and inert headers."""
+	sortable = getattr(frappe.local, "spa_sortable", None) or []
+	try:
+		del frappe.local.spa_sortable
+	except AttributeError:
+		pass
+	return {"sortable": sortable, **extra}
 
 
 def capped_total(doctype, filters=None, or_filters=None, cap=1000):

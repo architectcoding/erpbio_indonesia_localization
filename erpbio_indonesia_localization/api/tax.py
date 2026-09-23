@@ -9,6 +9,7 @@ import frappe
 
 from erpbio_indonesia_localization.api.list_utils import (
 	capped_total,
+	list_meta,
 	resolve_order_by,
 	to_getlist_filters,
 )
@@ -16,8 +17,11 @@ from frappe import _
 from frappe.utils import cint, flt
 
 
-def _check(doctype, ptype="read"):
-	if not frappe.has_permission(doctype, ptype):
+def _check(doctype, ptype="read", name=None):
+	"""Doctype-level by default; pass `name` wherever one document is read or
+	written, so user permissions and owner-only rules apply to it and not just
+	to the doctype as a whole."""
+	if not frappe.has_permission(doctype, ptype, doc=name):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
 
@@ -54,6 +58,20 @@ def get_context():
 	}
 
 
+def _page(rows, page_length, total, **extra):
+	"""One page for the shared ListView from a query that fetched page_length + 1
+	rows: the extra row, not the capped total, says whether there is a next page
+	(the total stops counting at 1001, and paging must not stop with it)."""
+	page_length = int(page_length)
+	return {
+		"items": rows[:page_length],
+		"total": total,
+		"has_next": len(rows) > page_length,
+		"meta": extra,
+		**list_meta(),
+	}
+
+
 # ------------------------------------------------------------------- exports
 @frappe.whitelist()
 def list_exports(txt=None, filters=None, order_by=None, start=0, page_length=20):
@@ -62,22 +80,22 @@ def list_exports(txt=None, filters=None, order_by=None, start=0, page_length=20)
 	_check("Coretax Faktur Export")
 	flt_list = to_getlist_filters(filters, EXPORT_FILTER_FIELDS)
 	or_filters = {"name": ["like", f"%{txt}%"]} if txt else None
-	rows = frappe.get_all(
+	rows = frappe.get_list(
 		"Coretax Faktur Export",
 		filters=flt_list,
 		or_filters=or_filters,
 		fields=["name", "company", "from_date", "to_date", "status", "export_file", "generated_on"],
 		order_by=resolve_order_by(order_by, EXPORT_ORDER_FIELDS, "creation desc"),
 		start=int(start),
-		page_length=int(page_length),
+		page_length=int(page_length) + 1,
 	)
 	total = capped_total("Coretax Faktur Export", filters=flt_list, or_filters=or_filters)
-	return {"items": rows, "total": total, "has_next": int(start) + len(rows) < total, "meta": {}}
+	return _page(rows, page_length, total)
 
 
 @frappe.whitelist()
 def get_export(name):
-	_check("Coretax Faktur Export")
+	_check("Coretax Faktur Export", name=name)
 	doc = frappe.get_doc("Coretax Faktur Export", name)
 	# The stored grand_total is the invoice's OWN currency total (si.grand_total,
 	# not base), so the frontend needs each row's currency or a foreign-currency
@@ -133,19 +151,19 @@ def create_export(company, from_date, to_date):
 
 @frappe.whitelist(methods=["POST"])
 def fetch_export_invoices(name):
-	_check("Coretax Faktur Export", "write")
+	_check("Coretax Faktur Export", "write", name)
 	return frappe.get_doc("Coretax Faktur Export", name).fetch_invoices()
 
 
 @frappe.whitelist(methods=["POST"])
 def generate_export(name):
-	_check("Coretax Faktur Export", "write")
+	_check("Coretax Faktur Export", "write", name)
 	return frappe.get_doc("Coretax Faktur Export", name).generate()
 
 
 @frappe.whitelist(methods=["POST"])
 def generate_export_xml(name):
-	_check("Coretax Faktur Export", "write")
+	_check("Coretax Faktur Export", "write", name)
 	return frappe.get_doc("Coretax Faktur Export", name).generate_xml()
 
 
@@ -198,7 +216,7 @@ def spt_masa(company, from_date, to_date):
 def list_bukti_potong(direction=None, start=0, page_length=50):
 	_check("Bukti Potong")
 	filters = {"direction": direction} if direction else {}
-	return frappe.get_all(
+	return frappe.get_list(
 		"Bukti Potong",
 		filters=filters,
 		fields=[
@@ -230,7 +248,7 @@ def save_bukti_potong(payload):
 	payload = frappe.parse_json(payload)
 	name = payload.pop("name", None)
 	if name:
-		_check("Bukti Potong", "write")
+		_check("Bukti Potong", "write", name)
 		doc = frappe.get_doc("Bukti Potong", name)
 	else:
 		_check("Bukti Potong", "create")
@@ -298,7 +316,7 @@ def _bp_attachments(name):
 
 @frappe.whitelist()
 def get_bukti_potong(name):
-	_check("Bukti Potong")
+	_check("Bukti Potong", name=name)
 	doc = frappe.get_doc("Bukti Potong", name)
 	out = {"name": doc.name, "docstatus": doc.docstatus}
 	for field in BP_FIELDS:
@@ -315,7 +333,7 @@ def get_bukti_potong(name):
 def remove_bukti_potong_attachment(name, file):
 	"""Detach a file. Gated on write of the *certificate*, not of File, so the
 	frontend never needs the generic delete surface."""
-	_check("Bukti Potong", "write")
+	_check("Bukti Potong", "write", name)
 	row = frappe.db.get_value(
 		"File",
 		{"name": file, "attached_to_doctype": "Bukti Potong", "attached_to_name": name},
@@ -335,7 +353,7 @@ def remove_bukti_potong_attachment(name, file):
 def set_bukti_potong_certificate(name, file_url=None):
 	"""Promote one of the attached files to *the* certificate (what prints and
 	what the list flags)."""
-	_check("Bukti Potong", "write")
+	_check("Bukti Potong", "write", name)
 	if file_url and not frappe.db.exists(
 		"File", {"file_url": file_url, "attached_to_doctype": "Bukti Potong", "attached_to_name": name}
 	):
@@ -450,22 +468,22 @@ def list_imports(txt=None, filters=None, order_by=None, start=0, page_length=20)
 	_check("Coretax Faktur Import")
 	flt_list = to_getlist_filters(filters, IMPORT_FILTER_FIELDS)
 	or_filters = {"name": ["like", f"%{txt}%"]} if txt else None
-	rows = frappe.get_all(
+	rows = frappe.get_list(
 		"Coretax Faktur Import",
 		filters=flt_list,
 		or_filters=or_filters,
 		fields=["name", "import_file", "status", "summary", "creation"],
 		order_by=resolve_order_by(order_by, IMPORT_ORDER_FIELDS, "creation desc"),
 		start=int(start),
-		page_length=int(page_length),
+		page_length=int(page_length) + 1,
 	)
 	total = capped_total("Coretax Faktur Import", filters=flt_list, or_filters=or_filters)
-	return {"items": rows, "total": total, "has_next": int(start) + len(rows) < total, "meta": {}}
+	return _page(rows, page_length, total)
 
 
 @frappe.whitelist()
 def get_import(name):
-	_check("Coretax Faktur Import")
+	_check("Coretax Faktur Import", name=name)
 	doc = frappe.get_doc("Coretax Faktur Import", name)
 	return {
 		"doc": {
@@ -501,13 +519,13 @@ def create_import(file_url):
 
 @frappe.whitelist(methods=["POST"])
 def preview_import(name):
-	_check("Coretax Faktur Import", "write")
+	_check("Coretax Faktur Import", "write", name)
 	return frappe.get_doc("Coretax Faktur Import", name).preview()
 
 
 @frappe.whitelist(methods=["POST"])
 def apply_import(name):
-	_check("Coretax Faktur Import", "write")
+	_check("Coretax Faktur Import", "write", name)
 	return frappe.get_doc("Coretax Faktur Import", name).apply()
 
 
@@ -1078,15 +1096,17 @@ def list_customers(txt=None, filters=None, order_by=None, start=0, page_length=2
 		if txt
 		else None
 	)
-	rows = frappe.get_all(
+	rows = frappe.get_list(
 		"Customer",
 		filters=flt_list,
 		or_filters=or_filters,
 		fields=list(CUSTOMER_LIST_FIELDS),
 		order_by=resolve_order_by(order_by, CUSTOMER_ORDER_FIELDS, "customer_name asc"),
 		start=int(start),
-		page_length=int(page_length),
+		page_length=int(page_length) + 1,
 	)
+	has_next = len(rows) > int(page_length)
+	rows = rows[: int(page_length)]
 	groups = _pemungut_groups()
 	for r in rows:
 		r["tax_status"], r["tax_message"] = _tax_status(r, groups)
@@ -1095,8 +1115,9 @@ def list_customers(txt=None, filters=None, order_by=None, start=0, page_length=2
 	return {
 		"items": rows,
 		"total": total,
-		"has_next": int(start) + len(rows) < total,
+		"has_next": has_next,
 		"meta": {"can_write": frappe.has_permission("Customer", "write")},
+		**list_meta(),
 	}
 
 
@@ -1106,7 +1127,7 @@ def customer_tax_summary(filters=None):
 	Deliberately unpaginated: the point is the size of the backlog."""
 	_check("Customer")
 	flt_list = _customer_filters(filters)
-	rows = frappe.get_all("Customer", filters=flt_list, fields=list(CUSTOMER_LIST_FIELDS))
+	rows = frappe.get_list("Customer", filters=flt_list, fields=list(CUSTOMER_LIST_FIELDS), page_length=0)
 	groups = _pemungut_groups()
 	out = {"total": len(rows), "Ready": 0, "Incomplete": 0, "Blocked": 0, "pemungut": 0}
 	for r in rows:
@@ -1119,7 +1140,7 @@ def customer_tax_summary(filters=None):
 
 @frappe.whitelist()
 def get_customer_tax(name):
-	_check("Customer")
+	_check("Customer", name=name)
 	row = frappe.db.get_value("Customer", name, list(CUSTOMER_LIST_FIELDS), as_dict=True)
 	if not row:
 		frappe.throw(_("Customer {0} not found.").format(name))
@@ -1156,7 +1177,7 @@ def save_customer_tax(payload):
 	name = payload.get("name")
 	if not name:
 		frappe.throw(_("Customer is required."))
-	_check("Customer", "write")
+	_check("Customer", "write", name)
 	doc = frappe.get_doc("Customer", name)
 	for field in CUSTOMER_TAX_FIELDS:
 		if field in payload:
@@ -1341,15 +1362,17 @@ def list_employees_pph21(txt=None, filters=None, order_by=None, start=0, page_le
 	_check("Employee")
 	flt_list = to_getlist_filters(filters, EMPLOYEE_FILTER_FIELDS)
 	or_filters = {"name": ["like", f"%{txt}%"], "employee_name": ["like", f"%{txt}%"]} if txt else None
-	rows = frappe.get_all(
+	rows = frappe.get_list(
 		"Employee",
 		filters=flt_list,
 		or_filters=or_filters,
 		fields=list(EMPLOYEE_PPH21_FIELDS),
 		order_by=resolve_order_by(order_by, EMPLOYEE_ORDER_FIELDS, "employee_name asc"),
 		start=int(start),
-		page_length=int(page_length),
+		page_length=int(page_length) + 1,
 	)
+	has_next = len(rows) > int(page_length)
+	rows = rows[: int(page_length)]
 	in_scope = _employees_in_scope([r["name"] for r in rows])
 	for r in rows:
 		r["pph21_status"], r["pph21_message"] = _employee_pph21_status(r)
@@ -1359,8 +1382,9 @@ def list_employees_pph21(txt=None, filters=None, order_by=None, start=0, page_le
 	return {
 		"items": rows,
 		"total": total,
-		"has_next": int(start) + len(rows) < total,
+		"has_next": has_next,
 		"meta": {"can_write": frappe.has_permission("Employee", "write")},
+		**list_meta(),
 	}
 
 
@@ -1368,7 +1392,7 @@ def list_employees_pph21(txt=None, filters=None, order_by=None, start=0, page_le
 def employee_pph21_summary(filters=None):
 	_check("Employee")
 	flt_list = to_getlist_filters(filters, EMPLOYEE_FILTER_FIELDS)
-	rows = frappe.get_all("Employee", filters=flt_list, fields=list(EMPLOYEE_PPH21_FIELDS))
+	rows = frappe.get_list("Employee", filters=flt_list, fields=list(EMPLOYEE_PPH21_FIELDS), page_length=0)
 	in_scope = _employees_in_scope([r["name"] for r in rows])
 	out = {"total": len(rows), "Ready": 0, "Blocked": 0, "Unsupported": 0, "in_scope": 0,
 	       "blocked_in_scope": 0}
@@ -1385,7 +1409,7 @@ def employee_pph21_summary(filters=None):
 
 @frappe.whitelist()
 def get_employee_pph21(name):
-	_check("Employee")
+	_check("Employee", name=name)
 	row = frappe.db.get_value("Employee", name, list(EMPLOYEE_PPH21_FIELDS), as_dict=True)
 	if not row:
 		frappe.throw(_("Employee {0} not found.").format(name))
@@ -1417,7 +1441,7 @@ def save_employee_pph21(payload):
 	name = payload.get("name")
 	if not name:
 		frappe.throw(_("Employee is required."))
-	_check("Employee", "write")
+	_check("Employee", "write", name)
 	doc = frappe.get_doc("Employee", name)
 	for field in EMPLOYEE_TAX_FIELDS:
 		if field in payload:
