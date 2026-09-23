@@ -243,6 +243,77 @@ def list_bukti_potong(direction=None, start=0, page_length=50):
 	)
 
 
+# The Bukti Potong list for the shared ListView. `direction` is a fixed argument
+# (the page's Received / Issued switch), not a user filter.
+BP_FILTER_FIELDS = {
+	"name", "company", "customer", "supplier", "tax_type", "tax_object_code", "status",
+	"withholding_date", "bp_number", "bp_date", "sales_invoice", "payment_entry",
+}
+BP_ORDER_FIELDS = {
+	"name", "customer", "supplier", "tax_type", "tax_object_code", "withholding_date",
+	"gross_amount", "tax_amount", "bp_number", "status", "creation",
+}
+BP_LIST_FIELDS = [
+	"name", "direction", "customer", "supplier", "tax_type", "tax_object_code", "sales_invoice",
+	"payment_entry", "withholding_date", "gross_amount", "rate", "tax_amount", "bp_number",
+	"bp_date", "bp_file", "status",
+]
+
+
+def _bp_query(direction, txt, filters):
+	flt_list = to_getlist_filters(filters, BP_FILTER_FIELDS)
+	if direction in ("Received", "Issued"):
+		flt_list.append(["direction", "=", direction])
+	or_filters = None
+	if (txt or "").strip():
+		like = f"%{txt.strip()}%"
+		or_filters = {"name": ["like", like], "customer": ["like", like], "supplier": ["like", like],
+			"bp_number": ["like", like]}
+	return flt_list, or_filters
+
+
+@frappe.whitelist()
+def bukti_potong_list(direction=None, txt=None, filters=None, order_by=None, start=0, page_length=20):
+	_check("Bukti Potong")
+	flt_list, or_filters = _bp_query(direction, txt, filters)
+	rows = frappe.get_list(
+		"Bukti Potong",
+		filters=flt_list,
+		or_filters=or_filters,
+		fields=BP_LIST_FIELDS,
+		order_by=resolve_order_by(order_by, BP_ORDER_FIELDS, "creation desc"),
+		start=int(start),
+		page_length=int(page_length) + 1,
+	)
+	return _page(rows, page_length, capped_total("Bukti Potong", filters=flt_list, or_filters=or_filters))
+
+
+@frappe.whitelist()
+def bukti_potong_summary(direction=None, txt=None, filters=None):
+	"""Totals for everything the list's search and filters match, not just the
+	page on screen -- plus the withholding-date span, which is the period an
+	e-Bupot export of this selection covers."""
+	_check("Bukti Potong")
+	flt_list, or_filters = _bp_query(direction, txt, filters)
+	rows = frappe.get_list(
+		"Bukti Potong",
+		filters=flt_list,
+		or_filters=or_filters,
+		fields=["status", "tax_amount", "withholding_date"],
+		page_length=0,
+	)
+	by_status = {}
+	for r in rows:
+		by_status[r.status] = by_status.get(r.status, 0) + flt(r.tax_amount)
+	dates = sorted(str(r.withholding_date) for r in rows if r.withholding_date)
+	return {
+		"count": len(rows),
+		"total": sum(by_status.values()),
+		"by_status": by_status,
+		"from_date": dates[0] if dates else None,
+		"to_date": dates[-1] if dates else None,
+	}
+
 @frappe.whitelist(methods=["POST"])
 def save_bukti_potong(payload):
 	payload = frappe.parse_json(payload)
