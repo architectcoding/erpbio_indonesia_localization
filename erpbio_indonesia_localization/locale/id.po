@@ -1098,3 +1098,57 @@ msgstr "{0} faktur yang tercantum akan diganti dengan isi periode saat ini."
 
 msgid "Stamp the Coretax faktur number, date and status onto {0} matched Sales Invoices?"
 msgstr "Cantumkan nomor, tanggal, dan status faktur Coretax pada {0} Faktur Penjualan yang cocok?"
+
+msgid "BP Date"
+msgstr "Tanggal BP"
+
+msgid "Coretax Export"
+msgstr "Ekspor Coretax"
+
+msgid "Coretax Import"
+msgstr "Impor Coretax"
+
+msgid "Customer Tax Identity"
+msgstr "Identitas Pajak Pelanggan"
+
+msgid "Discard"
+msgstr "Buang"
+
+msgid "Exported {0} certificates, {1} to {2}."
+msgstr "{0} bukti potong diekspor, {1} s.d. {2}."
+
+msgid "File"
+msgstr "Berkas"
+
+msgid "More than {0} rows match. Narrow the search or filters and export again."
+msgstr "Lebih dari {0} baris cocok. Persempit pencarian atau filter, lalu ekspor lagi."
+
+msgid "No certificate in this selection has a withholding date to export."
+msgstr "Tidak ada bukti potong dalam pilihan ini yang memiliki tanggal pemotongan untuk diekspor."
+
+msgid "PPh 21 Employees"
+msgstr "Karyawan PPh 21"
+
+msgid "PPh 21 Status"
+msgstr "Status PPh 21"
+
+msgid "Unknown list: {0}"
+msgstr "Daftar tidak dikenal: {0}"
+
+msgid "Unsupported format: {0}"
+msgstr "Format tidak didukung: {0}"
+
+msgid "What is missing"
+msgstr "Yang belum lengkap"
+
+msgid "You have unsaved changes on this page. Leave and discard them?"
+msgstr "Ada perubahan yang belum disimpan di halaman ini. Tinggalkan dan buang perubahan?"
+
+msgid "{0} still expected"
+msgstr "{0} masih ditunggu"
+
+msgid "{0} to report"
+msgstr "{0} perlu dilaporkan"
+
+msgid "{0} withheld"
+msgstr "{0} dipotong"
