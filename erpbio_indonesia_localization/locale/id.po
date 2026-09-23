@@ -1338,3 +1338,6 @@ msgstr "{0} ditandai “Variable Based On Taxable Salary”, yang menyerahkan pe
 
 msgid "{0} of them have no PTKP status and would stop a payroll run."
 msgstr "{0} di antaranya belum memiliki status PTKP dan akan menghentikan proses penggajian."
+
+msgid "App Name & Icon"
+msgstr "Nama & Ikon Aplikasi"
