@@ -1212,3 +1212,60 @@ msgstr "NIK terdiri dari 16 digit; yang ini {0} digit."
 
 msgid "An NPWP has 15 or 16 digits; this one has {0}."
 msgstr "NPWP terdiri dari 15 atau 16 digit; yang ini {0} digit."
+
+msgid "App name & icon"
+msgstr "Nama & ikon aplikasi"
+
+msgid "Company logo shown in the ERPbio Tax web app. Falls back to a monogram if unset."
+msgstr "Logo perusahaan yang tampil di aplikasi web ERPbio Pajak. Jika kosong, memakai monogram."
+
+msgid "Could not load the settings."
+msgstr "Pengaturan tidak dapat dimuat."
+
+msgid "ERPbio Tax Settings"
+msgstr "Pengaturan ERPbio Pajak"
+
+msgid "Home-screen (PWA) icon for the ERPbio Tax app when installed to a phone. Use a square PNG, 512×512. Leave blank for the default. An already-installed app keeps its old icon until it is removed and re-added."
+msgstr "Ikon layar utama (PWA) untuk aplikasi ERPbio Pajak saat dipasang di ponsel. Gunakan PNG persegi 512×512. Kosongkan untuk ikon bawaan. Aplikasi yang sudah terpasang tetap memakai ikon lama sampai dihapus dan dipasang ulang."
+
+msgid "Indonesian Tax"
+msgstr "Pajak Indonesia"
+
+msgid "No withholding accounts yet."
+msgstr "Belum ada akun pemotongan."
+
+msgid "Optional memorable path that redirects to /erpbio-tax, e.g. a short alias. Leave blank to disable. (The app itself still lives at /erpbio-tax.)"
+msgstr "Alamat singkat opsional yang dialihkan ke /erpbio-tax. Kosongkan untuk menonaktifkan. (Aplikasinya tetap berada di /erpbio-tax.)"
+
+msgid "Payroll withholding: whether PPh 21 is calculated, and the verified rate tables."
+msgstr "Pemotongan penggajian: apakah PPh 21 dihitung, dan tabel tarif yang sudah diverifikasi."
+
+msgid "Shown in the ERPbio Tax web app (/erpbio-tax) sidebar, login, and browser tab. Used only where the Indonesian tax app (erpbio_indonesia_localization) is installed."
+msgstr "Tampil di sidebar, halaman masuk, dan tab browser aplikasi web ERPbio Pajak (/erpbio-tax). Hanya dipakai jika aplikasi pajak Indonesia (erpbio_indonesia_localization) terpasang."
+
+msgid "Tax App Branding"
+msgstr "Branding Aplikasi Pajak"
+
+msgid "Tax App Icon"
+msgstr "Ikon Aplikasi Pajak"
+
+msgid "Tax App Logo"
+msgstr "Logo Aplikasi Pajak"
+
+msgid "Tax App Title"
+msgstr "Judul Aplikasi Pajak"
+
+msgid "Tax App Vanity URL"
+msgstr "URL Singkat Aplikasi Pajak"
+
+msgid "This app's title, logo, home-screen icon and colour — in ERPbio Settings, with every other app's."
+msgstr "Judul, logo, ikon layar utama, dan warna aplikasi ini — di Pengaturan ERPbio, bersama aplikasi lainnya."
+
+msgid "Which deduction accounts create an Expected Bukti Potong, and at what rate."
+msgstr "Akun potongan mana yang membuat Bukti Potong berstatus Ditunggu, dan dengan tarif berapa."
+
+msgid "Withholding Accounts"
+msgstr "Akun Pemotongan"
+
+msgid "e-Faktur defaults, PPN rate and the government-buyer rules."
+msgstr "Bawaan e-Faktur, tarif PPN, dan aturan pembeli pemerintah."

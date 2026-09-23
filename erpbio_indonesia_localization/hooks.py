@@ -92,6 +92,13 @@ regional_overrides = {
 erpbio_files_attached = ["erpbio_indonesia_localization.api.tax_ocr.on_files_attached"]
 # erpbio_general: the Tax Identity card asks whether a tax-document reader exists here.
 erpbio_tax_document_ocr = ["erpbio_indonesia_localization.api.tax_ocr.status"]
+# erpbio_general: this app's settings join the one consolidated Settings page
+# (api/core_settings.registry reads this), beside ERPbio's and ERPNext's own. Same
+# kind of plain app-to-app hook as the two above -- inert without erpbio_general.
+erpbio_core_settings = [
+	{"doctype": "Indonesia Tax Settings", "label": "Indonesian Tax", "icon": "percent", "provider_app": "erpbio_indonesia_localization"},
+	{"doctype": "EIL PPh 21 Settings", "label": "PPh 21", "icon": "users", "provider_app": "erpbio_indonesia_localization"},
+]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
