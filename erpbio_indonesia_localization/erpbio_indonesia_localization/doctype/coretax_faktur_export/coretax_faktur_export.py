@@ -141,6 +141,20 @@ def _price_and_discount(dpp, qty, net_rate):
 	return price, flt(price * qty - dpp, 2)
 
 
+def _spread(total, weights):
+	"""`total` split over `weights` pro rata, in whole hundredths that add up
+	exactly (largest remainder), each share capped at its own weight."""
+	if not total or not weights or sum(w for w in weights if w > 0) <= 0:
+		return [0.0] * len(weights)
+	base = sum(w for w in weights if w > 0)
+	cents = round(min(total, base) * 100)
+	raw = [(max(w, 0) / base) * cents for w in weights]
+	shares = [math.floor(r) for r in raw]
+	for i in sorted(range(len(raw)), key=lambda i: raw[i] - shares[i], reverse=True)[: cents - sum(shares)]:
+		shares[i] += 1
+	return [s / 100 for s in shares]
+
+
 class CoretaxFakturExport(Document):
 	def validate(self):
 		if getdate(self.from_date) > getdate(self.to_date):
@@ -314,10 +328,17 @@ class CoretaxFakturExport(Document):
 		A taxed charge is part of the base but is not an item, and Coretax checks
 		DPP = Harga Satuan x Jumlah - Diskon on each line, so it cannot be folded
 		into an item's DPP without inventing that item's unit price. It gets its
-		own line instead, priced at the charge itself."""
+		own line instead, priced at the charge itself.
+
+		A faktur pelunasan: when the invoice takes PPN already booked on an
+		advance off its own (the termin's faktur uang muka), that advance's DPP
+		is not billed again. It comes off the item lines as Total Diskon, pro
+		rata, so every line keeps Price x Qty - Diskon = DPP and the faktur's PPN
+		is the invoice's."""
 		from erpbio_indonesia_localization.doc_events.sales_invoice import taxable_charge_rows
 
-		lines = [self._line_values(item, settings) for item in si.items]
+		less = _spread(self._advance_dpp(si, settings), [flt(item.net_amount, 2) for item in si.items])
+		lines = [self._line_values(item, settings, less=share) for item, share in zip(si.items, less)]
 		mappings = _charge_mappings()
 		for row in taxable_charge_rows(si):
 			amount = flt(row.base_tax_amount or row.tax_amount, 2)
@@ -345,16 +366,38 @@ class CoretaxFakturExport(Document):
 			)
 		return lines
 
-	def _line_values(self, item, settings):
-		"""One invoice line's tax figures, shared by the workbook and the XML."""
+	def _advance_dpp(self, si, settings):
+		"""The DPP of advances whose PPN this invoice takes off its own, read back
+		from those rows at the faktur's effective rate (11% as 12% on 11/12)."""
+		from erpbio_indonesia_localization.doc_events.sales_invoice import (
+			_output_vat_accounts,
+			is_advance_vat_row,
+		)
+
+		accounts = _output_vat_accounts(si.company)
+		ppn = -sum(flt(r.base_tax_amount or r.tax_amount) for r in (si.get("taxes") or []) if is_advance_vat_row(r, accounts))
+		if ppn <= 0:
+			return 0.0
+		effective = (flt(settings.tarif_ppn) or 12.0) / 100.0
+		if settings.use_dpp_nilai_lain:
+			effective *= (settings.dpp_numerator or 11) / (settings.dpp_denominator or 12)
+		return flt(ppn / effective, 2)
+
+	def _line_values(self, item, settings, less=0.0):
+		"""One invoice line's tax figures, shared by the workbook and the XML.
+		`less` is this line's share of an advance's DPP already invoiced (a
+		faktur pelunasan): it adds to the discount and comes off the DPP."""
 		tarif = flt(settings.tarif_ppn) or 12.0
 		num = settings.dpp_numerator or 11
 		den = settings.dpp_denominator or 12
 		dpp = flt(item.net_amount, 2)
-		dpp_lain = flt(dpp * num / den, 2) if settings.use_dpp_nilai_lain else dpp
 		charge = item.get("_charge_account")
 		qty = flt(item.qty, 2)
 		price, discount = _price_and_discount(dpp, qty, flt(item.net_rate, 2))
+		if less:
+			dpp = flt(dpp - less, 2)
+			discount = flt(discount + less, 2)
+		dpp_lain = flt(dpp * num / den, 2) if settings.use_dpp_nilai_lain else dpp
 		return {
 			"opt": (item.get("_barang_jasa") or "B - Jasa")[0] if charge else self._barang_jasa(item),
 			"code": (item.get("_goods_code") or "000000")

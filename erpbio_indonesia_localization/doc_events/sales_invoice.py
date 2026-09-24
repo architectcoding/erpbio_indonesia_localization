@@ -261,7 +261,7 @@ def taxable_charge_rows(doc):
 			return [r for r in rows if r.account_head not in accounts]
 		inside = _template_inside_count(doc, accounts)
 	else:
-		vat = next((r for r in rows if r.account_head in accounts), None)
+		vat = next((r for r in rows if r.account_head in accounts and not is_advance_vat_row(r, accounts)), None)
 		if not vat:
 			return []
 		if vat.charge_type == "On Net Total":
@@ -279,6 +279,15 @@ def taxable_charge_rows(doc):
 	if inside <= 0:
 		return []
 	return [r for r in rows[:inside] if r.account_head not in accounts]
+
+
+def is_advance_vat_row(row, accounts):
+	"""The row that takes PPN already booked on an advance off this invoice: a
+	negative Actual amount on an output-VAT account. The termin's payment booked
+	that PPN (its faktur uang muka); erpbio_general's advance_output_vat hook
+	puts the row first. It is not the invoice's PPN row, and on the faktur
+	pelunasan its DPP reads as a discount, not a line."""
+	return row.charge_type == "Actual" and flt(row.tax_amount) < 0 and row.account_head in accounts
 
 
 def _template_inside_count(doc, accounts):

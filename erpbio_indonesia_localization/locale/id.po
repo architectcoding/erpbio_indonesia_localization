@@ -1359,3 +1359,15 @@ msgstr "Nomor Pajak (negara asal)"
 
 msgid "Optional — the supplier's own tax number, as on its invoices."
 msgstr "Opsional — nomor pajak pemasok di negaranya, sesuai fakturnya."
+
+#: erpbio_indonesia_localization/erpbio_indonesia_localization/report/ppn_keluaran/ppn_keluaran.py
+msgid "Voucher"
+msgstr "Voucher"
+
+#: erpbio_indonesia_localization/erpbio_indonesia_localization/report/ppn_keluaran/ppn_keluaran.py
+msgid "Voucher Type"
+msgstr "Jenis Voucher"
+
+#: erpbio_indonesia_localization/erpbio_indonesia_localization/report/ppn_keluaran/ppn_keluaran.py
+msgid "Uang Muka"
+msgstr "Uang Muka"
