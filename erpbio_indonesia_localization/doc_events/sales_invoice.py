@@ -399,17 +399,23 @@ def withheld_on_advances(doc, account):
 	Matched on the ACCOUNT rather than on any new configuration: a deduction that
 	posted where this charge would post is the same tax by definition. Whether the
 	bendahara withholds at the advance or leaves it to the invoice is their choice,
-	so this has to be detected, never assumed."""
+	so this has to be detected, never assumed.
+
+	Other apps settle advances outside the Advances table — a Partial Invoice's
+	termin journal is paid on its own and taken off the invoice by a journal of
+	its own — and say what those payments withheld through the
+	`eil_withheld_on_advances` hook: fn(doc, account) -> amount."""
 	if not account:
 		return 0.0
+	extra = sum(flt(frappe.get_attr(fn)(doc, account)) for fn in frappe.get_hooks("eil_withheld_on_advances"))
 	names = [
 		a.reference_name
 		for a in (doc.get("advances") or [])
 		if a.get("reference_type") == "Payment Entry" and a.get("reference_name")
 	]
 	if not names:
-		return 0.0
-	return sum(
+		return extra
+	return extra + sum(
 		flt(r.amount)
 		for r in frappe.get_all(
 			"Payment Entry Deduction",

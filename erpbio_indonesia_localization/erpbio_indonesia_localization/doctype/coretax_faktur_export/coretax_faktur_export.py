@@ -155,6 +155,21 @@ def _spread(total, weights):
 	return [s / 100 for s in shares]
 
 
+def faktur_sources():
+	"""{doctype: module} — apps that issue a faktur from a document other than a
+	Sales Invoice, by the `eil_faktur_sources` hook (erpbio_general: a DP
+	invoice's faktur uang muka). Each module has DOCTYPE, NUMBER_FIELD,
+	documents(company, from_date, to_date) -> [names], faktur_document(name) ->
+	a dict shaped like the Sales Invoice this export reads (with `_problems`, and
+	a line's `_less` for DPP not billed on it), and mark(name, status, number,
+	date)."""
+	out = {}
+	for path in frappe.get_hooks("eil_faktur_sources") or []:
+		module = frappe.get_module(path)
+		out[module.DOCTYPE] = module
+	return out
+
+
 class CoretaxFakturExport(Document):
 	def validate(self):
 		if getdate(self.from_date) > getdate(self.to_date):
@@ -207,13 +222,30 @@ class CoretaxFakturExport(Document):
 					"message": message,
 				},
 			)
+		for doctype, source in faktur_sources().items():
+			for name in source.documents(self.company, self.from_date, self.to_date):
+				doc = source.faktur_document(name)
+				ok, message = self._validate_invoice(doc, settings)
+				self.append(
+					"invoices",
+					{
+						"reference_doctype": doctype,
+						"reference_name": name,
+						"customer": doc.customer_name or doc.customer,
+						"posting_date": doc.posting_date,
+						"grand_total": doc.grand_total,
+						"kode_transaksi": doc.eil_kode_transaksi or settings.default_transaction_code,
+						"ok": 1 if ok else 0,
+						"message": message,
+					},
+				)
 		self.status = "Draft"
 		self.save()
 		valid = sum(1 for r in self.invoices if r.ok)
 		return {"total": len(self.invoices), "valid": valid}
 
 	def _validate_invoice(self, si, settings):
-		problems = []
+		problems = list(si.get("_problems") or [])
 		if not self.npwp_penjual:
 			problems.append(_("Company Tax ID (NPWP) is empty"))
 		if si.currency != "IDR":
@@ -293,7 +325,7 @@ class CoretaxFakturExport(Document):
 	def generate(self):
 		"""Build the Faktur/DetailFaktur workbook from the valid rows, attach
 		it, and stamp those invoices Exported."""
-		valid_rows = [r for r in self.invoices if r.ok and r.sales_invoice]
+		valid_rows = [r for r in self.invoices if r.ok and (r.sales_invoice or r.reference_name)]
 		if not valid_rows:
 			frappe.throw(_("No valid invoices — run Fetch Invoices and resolve the validation messages."))
 
@@ -311,15 +343,27 @@ class CoretaxFakturExport(Document):
 			}
 		).insert(ignore_permissions=True)
 
-		for row in valid_rows:
-			frappe.db.set_value(
-				"Sales Invoice", row.sales_invoice, "eil_faktur_status", "Exported", update_modified=False
-			)
+		self._mark_exported(valid_rows)
 
 		self.db_set("export_file", file_doc.file_url)
 		self.db_set("generated_on", now_datetime())
 		self.db_set("status", "Generated")
 		return {"file_url": file_doc.file_url, "invoices": len(valid_rows)}
+
+	def _faktur_doc(self, row):
+		if row.sales_invoice:
+			return frappe.get_doc("Sales Invoice", row.sales_invoice)
+		return faktur_sources()[row.reference_doctype].faktur_document(row.reference_name)
+
+	def _mark_exported(self, rows):
+		sources = faktur_sources()
+		for row in rows:
+			if row.sales_invoice:
+				frappe.db.set_value(
+					"Sales Invoice", row.sales_invoice, "eil_faktur_status", "Exported", update_modified=False
+				)
+			else:
+				sources[row.reference_doctype].mark(row.reference_name, "Exported")
 
 	def _faktur_lines(self, si, settings):
 		"""Every line the faktur carries: the items, then one line per charge that
@@ -334,11 +378,17 @@ class CoretaxFakturExport(Document):
 		advance off its own (the termin's faktur uang muka), that advance's DPP
 		is not billed again. It comes off the item lines as Total Diskon, pro
 		rata, so every line keeps Price x Qty - Diskon = DPP and the faktur's PPN
-		is the invoice's."""
+		is the invoice's.
+
+		A faktur uang muka (a source document) states each line's `_less` — the
+		part of the line not billed on this termin — the same way."""
 		from erpbio_indonesia_localization.doc_events.sales_invoice import taxable_charge_rows
 
 		less = _spread(self._advance_dpp(si, settings), [flt(item.net_amount, 2) for item in si.items])
-		lines = [self._line_values(item, settings, less=share) for item, share in zip(si.items, less)]
+		lines = [
+			self._line_values(item, settings, less=flt(share + flt(item.get("_less")), 2))
+			for item, share in zip(si.items, less)
+		]
 		mappings = _charge_mappings()
 		for row in taxable_charge_rows(si):
 			amount = flt(row.base_tax_amount or row.tax_amount, 2)
@@ -432,7 +482,7 @@ class CoretaxFakturExport(Document):
 
 		seller_idtku = self._seller_idtku()
 		for baris, row in enumerate(valid_rows, start=1):
-			si = frappe.get_doc("Sales Invoice", row.sales_invoice)
+			si = self._faktur_doc(row)
 			buyer = self._buyer_bits(si)
 			ws_faktur.append(
 				[
@@ -491,7 +541,7 @@ class CoretaxFakturExport(Document):
 		follow the published DJP schema (including its literal 'BuyerAdress'
 		spelling). Validate the first real file against Coretax before relying
 		on this path; the workbook + official converter stays the safe route."""
-		valid_rows = [r for r in self.invoices if r.ok and r.sales_invoice]
+		valid_rows = [r for r in self.invoices if r.ok and (r.sales_invoice or r.reference_name)]
 		if not valid_rows:
 			frappe.throw(_("No valid invoices — run Fetch Invoices and resolve the validation messages."))
 
@@ -509,10 +559,7 @@ class CoretaxFakturExport(Document):
 			}
 		).insert(ignore_permissions=True)
 
-		for row in valid_rows:
-			frappe.db.set_value(
-				"Sales Invoice", row.sales_invoice, "eil_faktur_status", "Exported", update_modified=False
-			)
+		self._mark_exported(valid_rows)
 		self.db_set("generated_on", now_datetime())
 		self.db_set("status", "Generated")
 		return {"file_url": file_doc.file_url, "invoices": len(valid_rows)}
@@ -528,7 +575,7 @@ class CoretaxFakturExport(Document):
 
 		seller_idtku = self._seller_idtku()
 		for row in valid_rows:
-			si = frappe.get_doc("Sales Invoice", row.sales_invoice)
+			si = self._faktur_doc(row)
 			buyer = self._buyer_bits(si)
 			inv = ET.SubElement(invoices_el, "TaxInvoice")
 			ET.SubElement(inv, "TaxInvoiceDate").text = str(getdate(si.posting_date))

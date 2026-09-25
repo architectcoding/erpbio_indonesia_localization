@@ -91,6 +91,7 @@ def get_data(filters):
 			}
 		)
 	data.extend(_advance_rows(filters, settings, effective, num, den, use_lain))
+	data.extend(_termin_rows(filters, settings, effective, num, den, use_lain))
 	data.sort(key=lambda r: (str(r["posting_date"]), r["sales_invoice"]))
 	return data
 
@@ -159,6 +160,54 @@ def _advance_rows(filters, settings, effective, num, den, use_lain):
 			"ppn": flt(amount, 2),
 			"faktur_number": "",
 			"faktur_status": _("Uang Muka"),
+			"bukti_setor_status": "",
+		})
+	return rows
+
+
+def _termin_rows(filters, settings, effective, num, den, use_lain):
+	"""A DP invoice's termin journal (erpbio_general's Partial Invoice: Dr Piutang
+	Uang Muka / Cr Uang Muka / Cr PPN Out) is output VAT of the DP invoice's date
+	— the faktur uang muka. An "Absorb" journal (an unpaid DP reversed into the
+	final invoice) takes it back in its own month, as the ledger does."""
+	meta = frappe.get_meta("Journal Entry")
+	if not (meta.has_field("custom_termin_role") and meta.has_field("custom_partial_invoice")):
+		return []
+	conditions = {"docstatus": 1, "custom_termin_role": ["in", ["Termin", "Absorb"]]}
+	if filters.get("company"):
+		conditions["company"] = filters.company
+	if filters.get("from_date") and filters.get("to_date"):
+		conditions["posting_date"] = ["between", [filters.from_date, filters.to_date]]
+	journals = frappe.get_all(
+		"Journal Entry", filters=conditions,
+		fields=["name", "posting_date", "company", "custom_termin_role", "custom_partial_invoice"],
+	)
+	rows = []
+	for je in journals:
+		accounts = _output_vat(je.company)
+		ppn = flt(frappe.db.sql(
+			"select sum(credit - debit) from `tabJournal Entry Account` where parent=%s and account in %s",
+			(je.name, list(accounts) or [""]),
+		)[0][0], 2)
+		if not ppn:
+			continue
+		pi = frappe.db.get_value(
+			"Partial Invoice", je.custom_partial_invoice,
+			["customer", "customer_name", "tax_id", "faktur_number", "faktur_status"], as_dict=True,
+		) or frappe._dict()
+		dpp = flt(ppn / effective, 2)
+		rows.append({
+			"voucher_type": "Journal Entry",
+			"sales_invoice": je.name,
+			"posting_date": je.posting_date,
+			"customer_name": pi.customer_name or pi.customer or "",
+			"buyer_npwp": pi.tax_id or (pi.customer and frappe.db.get_value("Customer", pi.customer, "tax_id")) or "",
+			"kode_transaksi": settings.default_transaction_code,
+			"dpp": dpp,
+			"dpp_nilai_lain": flt(dpp * num / den, 2) if use_lain else dpp,
+			"ppn": ppn,
+			"faktur_number": pi.faktur_number or "",
+			"faktur_status": pi.faktur_status or _("Not Exported") if je.custom_termin_role == "Termin" else _("Absorbed"),
 			"bukti_setor_status": "",
 		})
 	return rows

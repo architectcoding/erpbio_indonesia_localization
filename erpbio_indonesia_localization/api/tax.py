@@ -124,11 +124,14 @@ def get_export(name):
 		},
 		"invoices": [
 			{
-				"sales_invoice": r.sales_invoice,
+				# a source document's row (a DP invoice's faktur uang muka) names its doctype
+				"sales_invoice": r.sales_invoice or r.reference_name,
+				"doctype": r.reference_doctype if r.reference_name and not r.sales_invoice else "Sales Invoice",
 				"customer": r.customer,
 				"posting_date": r.posting_date,
 				"grand_total": flt(r.grand_total),
-				"currency": currencies.get(r.sales_invoice),
+				"currency": currencies.get(r.sales_invoice)
+				or (r.reference_name and frappe.db.get_value(r.reference_doctype, r.reference_name, "currency")),
 				"kode_transaksi": r.kode_transaksi,
 				"ok": r.ok,
 				"message": r.message,
@@ -566,7 +569,8 @@ def get_import(name):
 		"rows": [
 			{
 				"referensi": r.referensi,
-				"sales_invoice": r.sales_invoice,
+				"sales_invoice": r.sales_invoice or r.reference_name,
+				"doctype": r.reference_doctype if r.reference_name and not r.sales_invoice else "Sales Invoice",
 				"faktur_number": r.faktur_number,
 				"faktur_date": r.faktur_date,
 				"djp_status": r.djp_status,

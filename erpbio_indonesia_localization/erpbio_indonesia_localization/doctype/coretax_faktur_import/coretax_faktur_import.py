@@ -61,14 +61,16 @@ class CoretaxFakturImport(Document):
 			djp_status = _cell(raw, cols["status"])
 			mapped = _map_status(djp_status, number)
 
-			ok, si_name, message = self._match(referensi, number, mapped)
+			ok, doctype, si_name, message = self._match(referensi, number, mapped)
 			if ok:
 				matched += 1
 			self.append(
 				"rows",
 				{
 					"referensi": referensi,
-					"sales_invoice": si_name,
+					"sales_invoice": si_name if doctype == "Sales Invoice" else None,
+					"reference_doctype": doctype if doctype != "Sales Invoice" else None,
+					"reference_name": si_name if doctype != "Sales Invoice" else None,
 					"faktur_number": number,
 					"faktur_date": date,
 					"djp_status": djp_status,
@@ -86,18 +88,30 @@ class CoretaxFakturImport(Document):
 		return {"total": len(self.rows), "matched": matched}
 
 	def _match(self, referensi, number, mapped):
+		"""(ok, doctype, name, message). The Referensi is a Sales Invoice's name,
+		or a source document's (a DP invoice's faktur uang muka — eil_faktur_sources)."""
+		from erpbio_indonesia_localization.erpbio_indonesia_localization.doctype.coretax_faktur_export.coretax_faktur_export import (
+			faktur_sources,
+		)
+
 		if not referensi:
-			return False, None, _("no Referensi — cannot match to a Sales Invoice")
+			return False, None, None, _("no Referensi — cannot match to a Sales Invoice")
+		doctype, number_field = "Sales Invoice", "eil_faktur_number"
 		if not frappe.db.exists("Sales Invoice", {"name": referensi, "docstatus": 1}):
-			return False, None, _("no submitted Sales Invoice named {0}").format(referensi)
+			doctype = next(
+				(d for d in faktur_sources() if frappe.db.exists(d, {"name": referensi, "docstatus": 1})), None
+			)
+			if not doctype:
+				return False, None, None, _("no submitted Sales Invoice named {0}").format(referensi)
+			number_field = faktur_sources()[doctype].NUMBER_FIELD
 		if not number:
-			return False, referensi, _("row has no faktur number")
+			return False, doctype, referensi, _("row has no faktur number")
 		if not mapped:
-			return False, referensi, _("status not final yet — skipped")
-		existing = frappe.db.get_value("Sales Invoice", referensi, "eil_faktur_number")
+			return False, doctype, referensi, _("status not final yet — skipped")
+		existing = frappe.db.get_value(doctype, referensi, number_field)
 		if existing and existing != number:
-			return True, referensi, _("will replace faktur number {0}").format(existing)
-		return True, referensi, _("Ready")
+			return True, doctype, referensi, _("will replace faktur number {0}").format(existing)
+		return True, doctype, referensi, _("Ready")
 
 	# ------------------------------------------------------------------- apply
 	@frappe.whitelist()
@@ -105,8 +119,19 @@ class CoretaxFakturImport(Document):
 		"""Write faktur number/date/status onto every matched Sales Invoice."""
 		if self.status != "Previewed":
 			frappe.throw(_("Run Preview first."))
+		from erpbio_indonesia_localization.erpbio_indonesia_localization.doctype.coretax_faktur_export.coretax_faktur_export import (
+			faktur_sources,
+		)
+
 		applied = 0
 		for row in self.rows:
+			if row.ok and row.reference_name and not row.sales_invoice:
+				faktur_sources()[row.reference_doctype].mark(
+					row.reference_name, row.mapped_status, row.faktur_number, row.faktur_date
+				)
+				row.db_set("message", _("Applied"))
+				applied += 1
+				continue
 			if not (row.ok and row.sales_invoice):
 				continue
 			values = {"eil_faktur_number": row.faktur_number, "eil_faktur_status": row.mapped_status}
