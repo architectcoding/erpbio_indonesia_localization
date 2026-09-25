@@ -51,6 +51,7 @@ def before_validate(doc, method=None):
 	rows to adjust rather than a blank table."""
 	if doc.get("is_return"):
 		return
+	_carry_replaced_faktur(doc)
 	_derive_pemungut(doc)
 	_default_pemungut_kode(doc)
 	if not doc.get("eil_is_pemungut"):
@@ -398,6 +399,21 @@ def _derive_pemungut(doc):
 	if frappe.db.get_value("Sales Invoice", doc.name, "customer") == doc.customer:
 		return
 	doc.eil_is_pemungut = 1 if is_pemungut_customer(doc.customer) else 0
+
+
+def _carry_replaced_faktur(doc):
+	"""An amendment of an invoice whose faktur Coretax approved is its Faktur
+	Pengganti: flag it and carry the approved number it replaces. The faktur
+	fields are no_copy, so the amendment used to start blank and export as a
+	second Normal faktur for the same sale (T-004)."""
+	if not doc.is_new() or not doc.get("amended_from") or doc.get("eil_replaces_faktur_number"):
+		return
+	if not frappe.get_meta("Sales Invoice").has_field("eil_replaces_faktur_number"):
+		return
+	original = frappe.db.get_value("Sales Invoice", doc.amended_from, ["eil_faktur_status", "eil_faktur_number"], as_dict=True)
+	if original and original.eil_faktur_status == "Approved" and original.eil_faktur_number:
+		doc.eil_pengganti = 1
+		doc.eil_replaces_faktur_number = original.eil_faktur_number
 
 
 def pemungut_transaction_code():

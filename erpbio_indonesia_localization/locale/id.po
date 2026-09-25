@@ -1460,209 +1460,22 @@ msgstr "{0} ditandai sudah termasuk pajak, sedangkan pembeli ini instansi pemeri
 msgid "Government buyer"
 msgstr "Pembeli instansi pemerintah"
 
-msgid "A rate set is verified or unlocked with its Verify and Unlock actions, not by editing the status."
-msgstr "Set tarif diverifikasi atau dibuka dengan tombol Verifikasi dan Buka Kunci, bukan dengan mengubah statusnya."
-
-msgid "Add band"
-msgstr "Tambah lapisan"
-
-msgid "Annual Amount"
-msgstr "Jumlah Setahun"
-
-msgid "Attach the regulation PDF first — a verification is only as good as what it was checked against."
-msgstr "Lampirkan PDF peraturannya terlebih dahulu — verifikasi hanya sebaik dokumen yang dijadikan acuan."
-
-msgid "Calculates with this set's SAVED rates — save first to try your edits."
-msgstr "Menghitung dengan tarif set ini yang SUDAH DISIMPAN — simpan dulu untuk mencoba perubahan Anda."
-
-msgid "Checks"
-msgstr "Pemeriksaan"
-
-msgid "Choose the rate set this row belongs to."
-msgstr "Pilih set tarif tempat baris ini berada."
-
-msgid "Could not complete that."
-msgstr "Tindakan itu tidak dapat diselesaikan."
-
-msgid "Could not create the rate set."
-msgstr "Set tarif tidak dapat dibuat."
-
-msgid "Could not load the rate set."
-msgstr "Set tarif tidak dapat dimuat."
-
-msgid "Created from the rows loaded before rate sets existed. Source: {0}"
-msgstr "Dibuat dari baris yang dimuat sebelum ada set tarif. Sumber: {0}"
-
-msgid "Delete rate set"
-msgstr "Hapus set tarif"
-
-msgid "Delete this draft and all its rates?"
-msgstr "Hapus draf ini beserta semua tarifnya?"
-
-msgid "Effective {0}"
-msgstr "Berlaku {0}"
-
-msgid "Four-eyes is on: someone else has to verify."
-msgstr "Empat mata aktif: orang lain yang harus memverifikasi."
-
-msgid "Four-eyes is on: you last edited these rates, so someone else has to verify them."
-msgstr "Empat mata aktif: Anda yang terakhir mengubah tarif ini, jadi orang lain yang harus memverifikasinya."
-
-msgid "In Force"
-msgstr "Berlaku"
-
-msgid "In force"
-msgstr "Berlaku"
-
-msgid "Last unlocked because: {0}"
-msgstr "Terakhir dibuka karena: {0}"
-
-msgid "Manage rate sets"
-msgstr "Kelola set tarif"
-
-msgid "New Rate Set"
-msgstr "Set Tarif Baru"
-
-msgid "Next: {0} takes effect {1} and is NOT verified — payroll from that date stops until it is."
-msgstr "Berikutnya: {0} berlaku {1} dan BELUM diverifikasi — penggajian sejak tanggal itu berhenti sampai diverifikasi."
-
-msgid "Next: {0}, verified, takes effect {1}."
-msgstr "Berikutnya: {0}, sudah diverifikasi, berlaku {1}."
-
-msgid "No PPh 21 (Pasal 17) brackets are loaded for {0}."
-msgstr "Tidak ada lapisan PPh 21 (Pasal 17) yang dimuat untuk {0}."
-
-msgid "No PPh 21 rate set is in force on {0}. Create or load one under ERPbio Tax > PPh 21 > Rate Sets."
-msgstr "Tidak ada set tarif PPh 21 yang berlaku pada {0}. Buat atau muat di ERPbio Pajak > PPh 21 > Set Tarif."
-
-msgid "No PPh 21 rate set to calculate with."
-msgstr "Tidak ada set tarif PPh 21 untuk menghitung."
-
-msgid "No PTKP rate is loaded for status {0}."
-msgstr "Tidak ada tarif PTKP yang dimuat untuk status {0}."
-
-msgid "No rate set is in force today."
-msgstr "Tidak ada set tarif yang berlaku hari ini."
-
-msgid "No {0} band covers {1}."
-msgstr "Tidak ada lapisan {0} yang mencakup {1}."
-
-msgid "No {0} bands are loaded for {1}."
-msgstr "Tidak ada lapisan {0} yang dimuat untuk {1}."
-
-msgid "Not attached — required before verifying"
-msgstr "Belum dilampirkan — wajib sebelum verifikasi"
-
-msgid "Not verified — PPh 21 refuses to compute until this set is verified."
-msgstr "Belum diverifikasi — PPh 21 menolak menghitung sampai set ini diverifikasi."
-
-msgid "Not verified — payroll will not compute with these rates."
-msgstr "Belum diverifikasi — penggajian tidak akan menghitung dengan tarif ini."
-
-msgid "One ordinary month's withholding with this set's rates, verified or not."
-msgstr "Pemotongan satu bulan biasa dengan tarif set ini, sudah diverifikasi atau belum."
-
-msgid "PPh 21 rates missing"
-msgstr "Tarif PPh 21 tidak ada"
-
-msgid "PPh 21 tables unverified"
-msgstr "Tabel PPh 21 belum diverifikasi"
-
-msgid "PTKP for {0} is {1} but its parts add up to {2}. Check the PTKP rate table."
-msgstr "PTKP untuk {0} adalah {1} tetapi rinciannya berjumlah {2}. Periksa tabel tarif PTKP."
-
-msgid "Payroll already computed with these rates ({0} salary slips, {1} BPA1 certificates). Changing them would re-state those documents — create a new rate set instead."
-msgstr "Penggajian sudah dihitung dengan tarif ini ({0} slip gaji, {1} bukti potong BPA1). Mengubahnya berarti menyatakan ulang dokumen tersebut — buat set tarif baru saja."
-
-msgid "Rate Sets"
-msgstr "Set Tarif"
-
-msgid "Rate set {0} does not exist."
-msgstr "Set tarif {0} tidak ada."
-
-msgid "Rate set {0} is verified, so its rates are frozen. Unlock it first."
-msgstr "Set tarif {0} sudah diverifikasi, sehingga tarifnya dibekukan. Buka kuncinya terlebih dahulu."
-
-msgid "Rate set {0} is verified. Unlock it before changing its rates."
-msgstr "Set tarif {0} sudah diverifikasi. Buka kuncinya sebelum mengubah tarifnya."
-
-msgid "Rate set {0} is verified. Unlock it before deleting it."
-msgstr "Set tarif {0} sudah diverifikasi. Buka kuncinya sebelum menghapusnya."
-
-msgid "Rate set {0} is verified; unlock it before changing its regulation."
-msgstr "Set tarif {0} sudah diverifikasi; buka kuncinya sebelum mengubah peraturannya."
-
-msgid "Rates in force"
-msgstr "Tarif yang berlaku"
-
-msgid "Rates last edited by {0}."
-msgstr "Tarif terakhir diubah oleh {0}."
-
-msgid "Regulation PDF"
-msgstr "PDF Peraturan"
-
-msgid "Regulation PDF attached."
-msgstr "PDF peraturan dilampirkan."
-
-msgid "Say why the verified rates are being unlocked."
-msgstr "Jelaskan mengapa tarif yang sudah diverifikasi dibuka kuncinya."
-
-msgid "Shipped with the app. Source: {0}"
-msgstr "Dikirim bersama aplikasi. Sumber: {0}"
-
-msgid "Starts as a copy of the rates in force on that date. It stays a draft — payroll does not use it — until it is verified."
-msgstr "Dimulai sebagai salinan tarif yang berlaku pada tanggal itu. Tetap berupa draf — tidak dipakai penggajian — sampai diverifikasi."
-
-msgid "TER {0}"
-msgstr "TER {0}"
-
-msgid "The PPh 21 rates in force on {0} ({1}, effective {2}) are loaded but not verified. Verify that rate set under ERPbio Tax > PPh 21 > Rate Sets (EIL PPh 21 Rate Set in Desk) before running payroll."
-msgstr "Tarif PPh 21 yang berlaku pada {0} ({1}, berlaku {2}) sudah dimuat tetapi belum diverifikasi. Verifikasi set tarif itu di ERPbio Pajak > PPh 21 > Set Tarif (EIL PPh 21 Rate Set di Desk) sebelum menjalankan penggajian."
-
-msgid "The set goes back to draft: until it is verified again, payroll in its period stops. Refused once payroll or a BPA1 certificate used it."
-msgstr "Set kembali menjadi draf: sampai diverifikasi lagi, penggajian dalam periodenya berhenti. Ditolak jika penggajian atau bukti potong BPA1 sudah memakainya."
-
-msgid "These rates do not pass their own structural checks yet:<br>{0}"
-msgstr "Tarif ini belum lolos pemeriksaan strukturnya sendiri:<br>{0}"
-
-msgid "To (0 = and above)"
-msgstr "Sampai (0 = ke atas)"
-
-msgid "Unknown TER category {0}."
-msgstr "Kategori TER {0} tidak dikenal."
-
-msgid "Unlock verified rates"
-msgstr "Buka kunci tarif yang sudah diverifikasi"
-
-msgid "Unlocked. Edit, then verify again."
-msgstr "Kunci dibuka. Ubah, lalu verifikasi lagi."
-
-msgid "Used by {0} submitted salary slips and {1} BPA1 certificates — these rates can no longer be unlocked."
-msgstr "Dipakai oleh {0} slip gaji dan {1} bukti potong BPA1 yang sudah diajukan — tarif ini tidak dapat dibuka kuncinya lagi."
-
-msgid "Verified rates"
-msgstr "Tarif terverifikasi"
-
-msgid "Verified. Payroll computes with these rates from their effective date."
-msgstr "Terverifikasi. Penggajian menghitung dengan tarif ini sejak tanggal berlakunya."
-
-msgid "Verify the rate set in force first (Rates in force, above)."
-msgstr "Verifikasi set tarif yang berlaku terlebih dahulu (Tarif yang berlaku, di atas)."
-
-msgid "Verify these rates"
-msgstr "Verifikasi tarif ini"
-
-msgid "You are confirming that the TER, PTKP and Pasal 17 rates in this set match {0}, as in the attached PDF. Payroll will compute with them from {1}."
-msgstr "Anda menyatakan bahwa tarif TER, PTKP, dan Pasal 17 dalam set ini sesuai dengan {0}, seperti dalam PDF terlampir. Penggajian akan menghitung dengannya sejak {1}."
-
-msgid "annual allowance per status, and its TER category"
-msgstr "tunjangan setahun per status, dan kategori TER-nya"
-
-msgid "e.g. PMK 168/2023"
-msgstr "mis. PMK 168/2023"
-
-msgid "missing"
-msgstr "belum ada"
-
-msgid "{0} · effective {1}"
-msgstr "{0} · berlaku {1}"
+#: erpbio_indonesia_localization/setup/install.py
+msgid "Replaces Faktur Number"
+msgstr "Nomor Faktur yang Diganti"
+
+#: erpbio_indonesia_localization/setup/install.py
+msgid "The approved faktur this Faktur Pengganti replaces."
+msgstr "Faktur yang sudah disetujui yang diganti oleh Faktur Pengganti ini."
+
+#: erpbio_indonesia_localization/doctype/coretax_faktur_export/coretax_faktur_export.py
+msgid "a Faktur Pengganti needs the number of the faktur it replaces"
+msgstr "Faktur Pengganti memerlukan nomor faktur yang diganti"
+
+#: erpbio_indonesia_localization/doctype/coretax_faktur_export/coretax_faktur_export.py
+msgid "Ready — Pengganti for {0}"
+msgstr "Siap — Pengganti untuk {0}"
+
+#: erpbio_indonesia_localization/doctype/coretax_faktur_import/coretax_faktur_import.py
+msgid "closes the faktur of the cancelled invoice"
+msgstr "menutup faktur dari faktur penjualan yang dibatalkan"
