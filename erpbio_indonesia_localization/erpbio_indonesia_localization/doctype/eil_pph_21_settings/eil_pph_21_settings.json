@@ -11,6 +11,7 @@
   "verification_section",
   "tables_verified",
   "tables_source",
+  "require_four_eyes",
   "deductions_section",
   "biaya_jabatan_percent",
   "biaya_jabatan_monthly_cap"
@@ -37,8 +38,9 @@
   {
    "fieldname": "tables_verified",
    "fieldtype": "Check",
-   "label": "Rate tables verified against the regulation",
-   "description": "PPh 21 refuses to compute until this is ticked. A blocked payroll run is a far better failure than a silently wrong withholding."
+   "label": "Rate set in force is verified",
+   "description": "Mirrors the status of the rate set in force today (EIL PPh 21 Rate Set). Verify or unlock a set there; this is not set by hand.",
+   "read_only": 1
   },
   {
    "fieldname": "tables_source",
@@ -46,6 +48,13 @@
    "label": "Source / Provenance",
    "read_only": 1,
    "description": "Where the loaded tables came from."
+  },
+  {
+   "fieldname": "require_four_eyes",
+   "fieldtype": "Check",
+   "label": "Four-eyes on rate sets",
+   "default": "0",
+   "description": "When on, the person who last edited a rate set's rates cannot verify it."
   },
   {
    "fieldname": "deductions_section",
@@ -69,7 +78,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-25 13:45:00.000000",
+ "modified": "2026-09-26 06:30:00.000000",
  "modified_by": "Administrator",
  "module": "ERPbio Indonesia Localization",
  "name": "EIL PPh 21 Settings",

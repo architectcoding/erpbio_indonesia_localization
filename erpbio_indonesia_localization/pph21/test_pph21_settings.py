@@ -10,8 +10,6 @@ page, the consolidated Settings editor, Desk.
         --module erpbio_indonesia_localization.pph21.test_pph21_settings
 """
 
-from unittest.mock import patch
-
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
@@ -42,26 +40,24 @@ class TestPPh21Settings(FrappeTestCase):
 		super().tearDownClass()
 
 	def setUp(self):
-		_set(enabled=0, tables_verified=0, pph21_component=self.component)
+		_set(enabled=0, pph21_component=self.component)
+		_status("Draft")
 
-	def test_tables_failing_their_checks_cannot_be_verified_on_any_path(self):
-		doc = frappe.get_single(DOCTYPE)
-		doc.tables_verified = 1
-		with patch.object(tables, "validate_tables", return_value=["TER A: gap at 5,400,001"]):
-			with self.assertRaises(frappe.ValidationError):
-				doc.save()
+	# (Verifying itself -- clean checks, the PDF, four-eyes, who and when -- is
+	# the rate set's job: test_rate_sets.)
 
 	def test_enabling_needs_verified_tables(self):
 		with self.assertRaises(frappe.ValidationError):
 			tax.save_pph21_settings(frappe.as_json({"enabled": 1}))
 
 	def test_enabling_needs_a_component(self):
-		_set(tables_verified=1, pph21_component=None)
+		_status("Verified")
+		_set(pph21_component=None)
 		with self.assertRaises(frappe.ValidationError):
 			tax.save_pph21_settings(frappe.as_json({"enabled": 1}))
 
 	def test_enabling_once_ready(self):
-		_set(tables_verified=1)
+		_status("Verified")
 		out = tax.save_pph21_settings(frappe.as_json({"enabled": 1}))
 		self.assertEqual(out["settings"]["enabled"], 1)
 		self.assertEqual(out["enabled_change"]["value"], 1)
@@ -78,11 +74,6 @@ class TestPPh21Settings(FrappeTestCase):
 		doc.tables_source = "re-recorded by the loader"
 		doc.save()
 
-	def test_verification_records_who_and_when(self):
-		out = tax.set_pph21_tables_verified(1)
-		self.assertEqual(out["verified_change"]["value"], 1)
-		self.assertEqual(out["verified_change"]["by"], frappe.utils.get_fullname("Administrator"))
-
 	def test_preview_runs_before_verification_and_matches_djp(self):
 		# DJP's worked example: K/1 (TER B) on Rp 15,000,000 a month -> 6% -> 900,000.
 		out = tax.preview_pph21("K/1", 15_000_000)
@@ -90,6 +81,15 @@ class TestPPh21Settings(FrappeTestCase):
 		# ...and the gate still holds outside the preview.
 		with self.assertRaises(frappe.ValidationError):
 			tables.ter_rate("B", 15_000_000)
+
+
+def _status(status):
+	"""The rate set in force, Draft or Verified, without going through verify
+	(whose own rules test_rate_sets covers)."""
+	from erpbio_indonesia_localization.pph21 import rate_sets
+
+	frappe.db.set_value(rate_sets.DOCTYPE, rate_sets.in_force().name, "status", status, update_modified=False)
+	frappe.local._eil_pph21_tables = {}
 
 
 def _set(**values):

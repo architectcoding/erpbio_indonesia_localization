@@ -3,12 +3,14 @@
 
 """Statutory table lookups for PPh 21.
 
-Every rate resolves by `effective_from`, so a future change to the regulation is
-data — a new set of rows — rather than a code change.
+Every rate belongs to a rate set (EIL PPh 21 Rate Set, see rate_sets.py), and a
+lookup reads the set in force on its date -- the newest set whose effective date
+is on or before it. A change to the regulation is a new set: data, not code.
 
-Nothing here will compute against unverified tables: `require_verified_tables()`
-throws until an administrator has ticked the gate in EIL PPh 21 Settings. A
-blocked payroll run is a far better failure than a silently wrong withholding.
+Nothing here computes on an unverified set: `require_verified_tables(on_date)`
+throws when the set in force is still a Draft, even if an older verified set
+exists -- a blocked payroll run is a far better failure than a silently wrong
+withholding.
 """
 
 from contextlib import contextmanager
@@ -44,7 +46,7 @@ def ter_category(status, on_date=None):
 def daily_bands(on_date=None):
 	"""The TER Harian bands in force, so callers can read the threshold above
 	which the daily rate stops applying instead of hardcoding it."""
-	require_verified_tables()
+	require_verified_tables(on_date)
 	return _rows("EIL TER Bracket", on_date, filters={"category": "Harian"})
 
 
@@ -82,7 +84,7 @@ def pasal17_tax(taxable_income, on_date=None):
 	Progressive, so every band below the top one is charged in full — unlike the
 	TER lookup, which picks a single band's rate.
 	"""
-	require_verified_tables()
+	require_verified_tables(on_date)
 	brackets = _rows("EIL PPh 21 Bracket", on_date)
 	if not brackets:
 		frappe.throw(_("No PPh 21 (Pasal 17) brackets are loaded for {0}.").format(on_date or nowdate()))
@@ -107,7 +109,7 @@ def pasal17_bands(taxable_income, on_date=None):
 	"""The Pasal 17 calculation band by band, as the certificate prints it
 	("5% x 60.000.000 = 3.000.000"). Same arithmetic as pasal17_tax, kept
 	together so a fix to one cannot leave the other stating something else."""
-	require_verified_tables()
+	require_verified_tables(on_date)
 	remaining = flt(taxable_income)
 	out = []
 	for row in _rows("EIL PPh 21 Bracket", on_date):
@@ -162,50 +164,80 @@ def ptkp_breakdown(status, on_date=None):
 
 # ------------------------------------------------------------------ the gate
 @contextmanager
-def preview_unverified():
-	"""Let a read-only preview compute before the gate is ticked: reading an
+def preview_unverified(rate_set=None):
+	"""Let a read-only preview compute before a set is verified: reading an
 	answer against the regulation's worked examples is part of checking the
-	tables, so refusing it would make the gate harder to open honestly. Scoped to
-	the current request and restored on exit; payroll never enters it."""
-	previous = getattr(frappe.local, "_eil_pph21_preview", False)
-	frappe.local._eil_pph21_preview = True
+	rates, so refusing it would make the gate harder to open honestly. With
+	`rate_set`, lookups read that set instead of the one in force (previewing a
+	draft). Scoped to the current request and restored on exit; payroll never
+	enters it."""
+	previous = getattr(frappe.local, "_eil_pph21_preview", None)
+	frappe.local._eil_pph21_preview = {"set": rate_set}
 	try:
 		yield
 	finally:
 		frappe.local._eil_pph21_preview = previous
 
 
-def require_verified_tables():
-	if getattr(frappe.local, "_eil_pph21_preview", False):
+def _preview():
+	return getattr(frappe.local, "_eil_pph21_preview", None)
+
+
+def require_verified_tables(on_date=None):
+	if _preview():
 		return
-	settings = frappe.get_cached_doc("EIL PPh 21 Settings")
-	if not settings.tables_verified:
+	from erpbio_indonesia_localization.pph21 import rate_sets
+
+	current = rate_sets.in_force(on_date)
+	day = getdate(on_date or nowdate())
+	if not current:
+		frappe.throw(
+			_("No PPh 21 rate set is in force on {0}. Create or load one under ERPbio Tax > PPh 21 > Rate Sets.").format(day),
+			title=_("PPh 21 rates missing"),
+		)
+	if current.status != "Verified":
 		frappe.throw(
 			_(
-				"PPh 21 rate tables have not been verified. Open EIL PPh 21 Settings, check the "
-				"loaded TER, PTKP and Pasal 17 tables against the regulation, then tick "
-				"“Rate tables verified against the regulation”."
-			),
+				"The PPh 21 rates in force on {0} ({1}, effective {2}) are loaded but not verified. "
+				"Verify that rate set under ERPbio Tax > PPh 21 > Rate Sets (EIL PPh 21 Rate Set in Desk) "
+				"before running payroll."
+			).format(day, current.regulation, current.effective_from),
 			title=_("PPh 21 tables unverified"),
 		)
 
 
-def validate_tables(on_date=None):
-	"""Structural problems in the loaded tables, as a list of strings.
+def validate_tables(on_date=None, rate_set=None):
+	"""Structural problems in a set's tables (default: the set in force), as a
+	list of strings.
 
 	A bracket table that overlaps, leaves a gap, or whose rates fall is wrong
 	whatever its source — these caught a bad published rate and two bugs in the
 	extractor that produced the shipped fixture.
 	"""
+	ter = {c: _rows("EIL TER Bracket", on_date, filters={"category": c}, rate_set=rate_set) for c in TER_CATEGORIES}
+	return _problems(ter, _rows("EIL PPh 21 Bracket", on_date, rate_set=rate_set),
+	                 _rows("EIL PTKP Rate", on_date, rate_set=rate_set))
+
+
+def validate_rows(rows):
+	"""The same checks on rows that are not saved yet -- an editor's grid:
+	{"ter": [{category, from_amount, to_amount, rate}], "ptkp": [...], "pasal17": [...]}."""
+	def bands(items):
+		return sorted((frappe._dict(r) for r in items or []), key=lambda r: flt(r.from_amount))
+
+	ter = {c: bands([r for r in rows.get("ter") or [] if r.get("category") == c]) for c in TER_CATEGORIES}
+	return _problems(ter, bands(rows.get("pasal17")), [frappe._dict(r) for r in rows.get("ptkp") or []])
+
+
+def _problems(ter, pasal17, ptkp):
 	problems = []
 	for category in TER_CATEGORIES:
-		rows = _rows("EIL TER Bracket", on_date, filters={"category": category})
 		# TER Harian stops at Rp 2,500,000 by design — above that the daily rate no
 		# longer applies at all (gross x 50% x Pasal 17), so it must NOT be open-ended.
-		problems += _band_problems(rows, f"TER {category}", open_ended=category != "Harian")
-	problems += _band_problems(_rows("EIL PPh 21 Bracket", on_date), "Pasal 17")
+		problems += _band_problems(ter[category], f"TER {category}", open_ended=category != "Harian")
+	problems += _band_problems(pasal17, "Pasal 17")
 
-	statuses = {r.ptkp_status for r in _rows("EIL PTKP Rate", on_date)}
+	statuses = {r.ptkp_status for r in ptkp}
 	missing = [s for s in PTKP_STATUSES if s not in statuses]
 	if missing:
 		problems.append(f"PTKP: no rate for {', '.join(missing)}")
@@ -240,7 +272,7 @@ def _band_problems(rows, label, open_ended=True):
 
 # ------------------------------------------------------------------ internals
 def _band_rate(doctype, amount, on_date, filters, label):
-	require_verified_tables()
+	require_verified_tables(on_date)
 	rows = _rows(doctype, on_date, filters=filters)
 	if not rows:
 		frappe.throw(_("No {0} bands are loaded for {1}.").format(label, on_date or nowdate()))
@@ -254,32 +286,35 @@ def _band_rate(doctype, amount, on_date, filters, label):
 
 
 def _ptkp_row(status, on_date=None):
-	require_verified_tables()
+	require_verified_tables(on_date)
 	rows = [r for r in _rows("EIL PTKP Rate", on_date) if r.ptkp_status == status]
 	if not rows:
 		frappe.throw(_("No PTKP rate is loaded for status {0}.").format(status or "?"))
 	return rows[0]
 
 
-def _rows(doctype, on_date=None, filters=None):
-	"""Rows in force on a date, ordered by band. Cached per request: fast within a
-	payroll run, never stale across one, so an administrator's correction takes
-	effect on the next request without a cache flush."""
-	on_date = getdate(on_date or nowdate())
-	key = (doctype, str(on_date), tuple(sorted((filters or {}).items())))
+def _rows(doctype, on_date=None, filters=None, rate_set=None):
+	"""One set's rows, ordered by band: `rate_set`, else the set a preview pinned,
+	else the set in force on `on_date`. Cached per request: fast within a payroll
+	run, never stale across one."""
+	if not rate_set:
+		pinned = _preview()
+		rate_set = pinned.get("set") if pinned else None
+	if not rate_set:
+		from erpbio_indonesia_localization.pph21 import rate_sets
+
+		current = rate_sets.in_force(on_date)
+		rate_set = current.name if current else None
+	if not rate_set:
+		return []
+	key = (doctype, rate_set, tuple(sorted((filters or {}).items())))
 	cache = getattr(frappe.local, "_eil_pph21_tables", None)
 	if cache is None:
 		cache = frappe.local._eil_pph21_tables = {}
 	if key in cache:
 		return cache[key]
 
-	conditions = dict(filters or {})
-	conditions["effective_from"] = ("<=", on_date)
-	rows = frappe.get_all(doctype, filters=conditions, fields=["*"], order_by="effective_from desc")
-	if rows:
-		# Only the newest set in force applies; older ones are history.
-		newest = rows[0].effective_from
-		rows = [frappe._dict(r) for r in rows if r.effective_from == newest]
-		rows.sort(key=lambda r: flt(r.from_amount))
+	rows = [frappe._dict(r) for r in frappe.get_all(doctype, filters={**(filters or {}), "rate_set": rate_set}, fields=["*"])]
+	rows.sort(key=lambda r: flt(r.from_amount))
 	cache[key] = rows
 	return rows

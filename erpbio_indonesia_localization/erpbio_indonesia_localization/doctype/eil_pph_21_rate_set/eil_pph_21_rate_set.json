@@ -1,0 +1,153 @@
+{
+ "actions": [],
+ "autoname": "field:effective_from",
+ "creation": "2026-09-26 06:30:00.000000",
+ "description": "One regulation's PPh 21 rate tables (TER, PTKP, Pasal 17). Payroll computes only on a Verified set; a verified set is frozen.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "effective_from",
+  "regulation",
+  "column_break_1",
+  "status",
+  "source_file",
+  "notes",
+  "verification_section",
+  "verified_by",
+  "verified_on",
+  "column_break_2",
+  "last_edited_by",
+  "unlock_reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "effective_from",
+   "fieldtype": "Date",
+   "label": "Effective From",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "set_only_once": 1,
+   "description": "The first date these rates apply to. The set with the latest date on or before a salary slip's end date is the one in force."
+  },
+  {
+   "fieldname": "regulation",
+   "fieldtype": "Data",
+   "label": "Regulation",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "e.g. PMK 168/2023"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nVerified",
+   "default": "Draft",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Changed only by Verify and Unlock."
+  },
+  {
+   "fieldname": "source_file",
+   "fieldtype": "Attach",
+   "label": "Regulation PDF",
+   "description": "What the verifier checked the rates against. Required before a set can be verified."
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "verification_section",
+   "fieldtype": "Section Break",
+   "label": "Verification"
+  },
+  {
+   "fieldname": "verified_by",
+   "fieldtype": "Link",
+   "label": "Verified By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "verified_on",
+   "fieldtype": "Datetime",
+   "label": "Verified On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_edited_by",
+   "fieldtype": "Link",
+   "label": "Rates Last Edited By",
+   "options": "User",
+   "read_only": 1,
+   "description": "Who last changed this set's rows. With four-eyes on, that person cannot verify it."
+  },
+  {
+   "fieldname": "unlock_reason",
+   "fieldtype": "Small Text",
+   "label": "Last Unlock Reason",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-26 06:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "ERPbio Indonesia Localization",
+ "name": "EIL PPh 21 Rate Set",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Tax User",
+   "read": 1,
+   "print": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "effective_from",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "regulation",
+ "track_changes": 1
+}

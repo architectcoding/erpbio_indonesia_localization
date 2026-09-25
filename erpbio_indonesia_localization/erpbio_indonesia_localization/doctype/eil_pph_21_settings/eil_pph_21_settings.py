@@ -17,8 +17,8 @@ class EILPPh21Settings(Document):
 		# a bad value must still migrate -- it just cannot save a new bad one.
 		if self._changed("pph21_component"):
 			self._check_component()
-		if self._turned_on("tables_verified"):
-			self._check_tables()
+		# tables_verified is a read-only mirror now: a rate set is verified on the
+		# set itself (pph21/rate_sets.py), with its structural checks and PDF.
 		if self._turned_on("enabled"):
 			self._check_ready_to_enable()
 
@@ -41,21 +41,12 @@ class EILPPh21Settings(Document):
 				).format(self.pph21_component)
 			)
 
-	def _check_tables(self):
-		from erpbio_indonesia_localization.pph21 import tables
-
-		problems = tables.validate_tables()
-		if problems:
-			frappe.throw(
-				_("These tables do not pass their own structural checks yet:<br>{0}").format(
-					"<br>".join(problems[:8])
-				)
-			)
-
 	def _check_ready_to_enable(self):
 		if not self.pph21_component:
 			frappe.throw(_("Choose the PPh 21 salary component before enabling PPh 21."))
-		if not self.tables_verified:
+		from erpbio_indonesia_localization.pph21 import rate_sets
+
+		if not rate_sets.in_force_verified():
 			frappe.throw(
 				_(
 					"Verify the rate tables before enabling PPh 21 — until then every salary slip "
