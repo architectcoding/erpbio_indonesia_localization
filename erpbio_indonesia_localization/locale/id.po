@@ -1459,3 +1459,23 @@ msgstr "{0} ditandai sudah termasuk pajak, sedangkan pembeli ini instansi pemeri
 #: erpbio_indonesia_localization/doc_events/sales_invoice.py
 msgid "Government buyer"
 msgstr "Pembeli instansi pemerintah"
+
+#: erpbio_indonesia_localization/setup/install.py
+msgid "Replaces Faktur Number"
+msgstr "Nomor Faktur yang Diganti"
+
+#: erpbio_indonesia_localization/setup/install.py
+msgid "The approved faktur this Faktur Pengganti replaces."
+msgstr "Faktur yang sudah disetujui yang diganti oleh Faktur Pengganti ini."
+
+#: erpbio_indonesia_localization/doctype/coretax_faktur_export/coretax_faktur_export.py
+msgid "a Faktur Pengganti needs the number of the faktur it replaces"
+msgstr "Faktur Pengganti memerlukan nomor faktur yang diganti"
+
+#: erpbio_indonesia_localization/doctype/coretax_faktur_export/coretax_faktur_export.py
+msgid "Ready — Pengganti for {0}"
+msgstr "Siap — Pengganti untuk {0}"
+
+#: erpbio_indonesia_localization/doctype/coretax_faktur_import/coretax_faktur_import.py
+msgid "closes the faktur of the cancelled invoice"
+msgstr "menutup faktur dari faktur penjualan yang dibatalkan"

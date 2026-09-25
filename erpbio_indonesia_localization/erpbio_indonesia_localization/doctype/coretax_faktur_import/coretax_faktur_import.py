@@ -97,6 +97,12 @@ class CoretaxFakturImport(Document):
 		if not referensi:
 			return False, None, None, _("no Referensi — cannot match to a Sales Invoice")
 		doctype, number_field = "Sales Invoice", "eil_faktur_number"
+		# a faktur cancelled in Coretax (Pembatalan) closes the approved faktur of an
+		# invoice already cancelled here: the one import that may touch it (T-004)
+		if mapped == "Cancelled" and number and frappe.db.exists(
+			"Sales Invoice", {"name": referensi, "docstatus": 2, "eil_faktur_number": number}
+		):
+			return True, doctype, referensi, _("closes the faktur of the cancelled invoice")
 		if not frappe.db.exists("Sales Invoice", {"name": referensi, "docstatus": 1}):
 			doctype = next(
 				(d for d in faktur_sources() if frappe.db.exists(d, {"name": referensi, "docstatus": 1})), None

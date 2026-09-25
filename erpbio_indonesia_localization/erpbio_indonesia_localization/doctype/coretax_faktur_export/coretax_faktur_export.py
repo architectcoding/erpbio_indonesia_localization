@@ -313,8 +313,15 @@ class CoretaxFakturExport(Document):
 				problems.append(_("no Coretax Unit for {0} (uom {1})").format(item.item_code, item.uom))
 				break  # one unit message is enough
 
+		# a Faktur Pengganti names the approved faktur it replaces (T-004)
+		replaces = (si.get("eil_replaces_faktur_number") or "").strip()
+		if si.get("eil_pengganti") and not replaces:
+			problems.append(_("a Faktur Pengganti needs the number of the faktur it replaces"))
+
 		problems.extend(self._charge_problems(si, settings))
-		return (False, "; ".join(problems)) if problems else (True, _("Ready"))
+		if problems:
+			return False, "; ".join(problems)
+		return True, _("Ready — Pengganti for {0}").format(replaces) if si.get("eil_pengganti") else _("Ready")
 
 	def _charge_problems(self, si, settings):
 		"""A charge inside the DPP that the faktur cannot state, and any residual

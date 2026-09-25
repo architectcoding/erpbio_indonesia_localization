@@ -240,6 +240,19 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Check",
 			"insert_after": "eil_kode_transaksi",
 		},
+		# The approved faktur a Pengganti replaces. Set when an invoice whose faktur
+		# Coretax approved is cancelled and amended (T-004); typed by hand when the
+		# replacement is raised another way. no_copy: an amendment of a Pengganti
+		# replaces THAT faktur, not the one it replaced.
+		{
+			"fieldname": "eil_replaces_faktur_number",
+			"label": "Replaces Faktur Number",
+			"fieldtype": "Data",
+			"insert_after": "eil_pengganti",
+			"depends_on": "eval:doc.eil_pengganti",
+			"no_copy": 1,
+			"description": "The approved faktur this Faktur Pengganti replaces.",
+		},
 		# A facility faktur (kode 07 PPN tidak dipungut, 08 dibebaskan) states the
 		# facility it rests on. Both are codes from Coretax's own reference list,
 		# typed as Coretax shows them; the export refuses a 07/08 invoice without

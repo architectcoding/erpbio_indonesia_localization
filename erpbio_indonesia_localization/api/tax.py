@@ -190,6 +190,42 @@ def release_export(name):
 	return {"released": released, "count": len(released)}
 
 
+@frappe.whitelist()
+def fakturs_to_cancel(company=None):
+	"""Approved fakturs whose invoice was cancelled here and that nothing
+	replaces: each has to be cancelled in Coretax (Pembatalan), or replaced by
+	amending the invoice (Faktur Pengganti). Until then DJP holds output VAT for
+	a sale the books no longer have (T-004). A faktur leaves the list once an
+	import brings its CANCELED status back, or a live invoice replaces it."""
+	_check("Coretax Faktur Export")
+	filters = {"docstatus": 2, "eil_faktur_status": "Approved", "eil_faktur_number": ["is", "set"]}
+	if company:
+		filters["company"] = company
+	rows = frappe.get_all(
+		"Sales Invoice", filters=filters,
+		fields=["name", "company", "customer", "customer_name", "posting_date", "grand_total", "currency", "eil_faktur_number"],
+		order_by="posting_date desc",
+	)
+	if not rows or not frappe.get_meta("Sales Invoice").has_field("eil_replaces_faktur_number"):
+		return rows
+	replaced = dict(frappe.get_all(
+		"Sales Invoice",
+		filters={"docstatus": ["<", 2], "eil_replaces_faktur_number": ["in", [r.eil_faktur_number for r in rows]]},
+		fields=["eil_replaces_faktur_number", "name"], as_list=True,
+	))
+	amended = dict(frappe.get_all(
+		"Sales Invoice", filters={"amended_from": ["in", [r.name for r in rows]], "docstatus": ["<", 2]},
+		fields=["amended_from", "name"], as_list=True,
+	))
+	out = []
+	for r in rows:
+		if r.eil_faktur_number in replaced:
+			continue
+		r["amended_to"] = amended.get(r.name)  # a draft amendment will replace it once exported
+		out.append(r)
+	return out
+
+
 @frappe.whitelist(methods=["POST"])
 def generate_export_xml(name):
 	_check("Coretax Faktur Export", "write", name)
