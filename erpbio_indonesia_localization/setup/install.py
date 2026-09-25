@@ -206,6 +206,26 @@ CUSTOM_FIELDS = {
 			"insert_after": "tax_id",
 			"collapsible": 1,
 		},
+		# The buyer's identity as it should appear on THIS faktur. The number
+		# already lives on the document (`tax_id`), and until these two joined it
+		# there, a NIK typed on an invoice whose customer is set to TIN exported
+		# mislabelled — see _buyer_bits, which prefers the document over the
+		# customer for all three. Blank means "whatever the Customer says".
+		{
+			"fieldname": "eil_id_type",
+			"label": "Buyer ID Type",
+			"fieldtype": "Select",
+			"options": "\nTIN\nNIK\nPassport\nOther",
+			"insert_after": "eil_efaktur_section",
+			"description": "Blank = take the Customer's. TIN = NPWP. The number itself is the Tax ID above.",
+		},
+		{
+			"fieldname": "eil_document_number",
+			"label": "Buyer Document Number",
+			"fieldtype": "Data",
+			"insert_after": "eil_id_type",
+			"depends_on": "eval:['Passport','Other'].includes(doc.eil_id_type)",
+		},
 		{
 			"fieldname": "eil_kode_transaksi",
 			"label": "Kode Transaksi",
@@ -362,6 +382,24 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Check",
 			"insert_after": "taxes_and_charges",
 			"description": "The buyer deposits the PPN itself and withholds PPh 22. Defaults from the customer; the accountant applies the actual charges on the invoice.",
+		},
+		# Same two fields as on the invoice, same fieldnames on purpose:
+		# get_mapped_doc copies by name, so an identity captured when the order
+		# was taken rides onto the invoice with no code.
+		{
+			"fieldname": "eil_id_type",
+			"label": "Buyer ID Type",
+			"fieldtype": "Select",
+			"options": "\nTIN\nNIK\nPassport\nOther",
+			"insert_after": "tax_id",
+			"description": "Blank = take the Customer's. TIN = NPWP. The number itself is the Tax ID above.",
+		},
+		{
+			"fieldname": "eil_document_number",
+			"label": "Buyer Document Number",
+			"fieldtype": "Data",
+			"insert_after": "eil_id_type",
+			"depends_on": "eval:['Passport','Other'].includes(doc.eil_id_type)",
 		},
 		{
 			"fieldname": "eil_tax_name",

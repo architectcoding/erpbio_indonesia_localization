@@ -1182,11 +1182,13 @@ def _customer_filters(filters):
 			missing = str(f.get("value") or "").lower() in ("1", "yes", "true")
 			continue
 		kept.append(f)
+	# Stay a LIST of [field, operator, value] the whole way: to_getlist_filters
+	# always returns that shape, and dict() on it raises ValueError as soon as a
+	# real filter sits alongside "missing Tax ID" (each row has three elements,
+	# not two) -- which crashed the list whenever the two were combined.
 	flt_list = to_getlist_filters(kept, CUSTOMER_FILTER_FIELDS)
 	if missing is not None:
-		if not isinstance(flt_list, dict):
-			flt_list = dict(flt_list or {})
-		flt_list["tax_id"] = ["is", "not set" if missing else "set"]
+		flt_list.append(["tax_id", "is", "not set" if missing else "set"])
 	return flt_list
 
 

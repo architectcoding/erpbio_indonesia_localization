@@ -54,11 +54,42 @@ def before_validate(doc, method=None):
 	_derive_pemungut(doc)
 	if not doc.get("eil_is_pemungut"):
 		return
+	_refuse_inclusive_vat(doc)
 	_strip_output_vat(doc)
 	if _charges(doc):
 		return  # already populated (or deliberately emptied on an existing doc)
 	for row in govt_rows_for(doc.get("taxes_and_charges"), doc.company):
 		doc.append("eil_govt_charges", row)
+
+
+
+def _refuse_inclusive_vat(doc):
+	"""A tax-inclusive price cannot be sold to a government buyer.
+
+	Two reasons, and either alone is enough.
+
+	Mechanically: the strip below removes the PPN row, and ERPNext then reads the
+	rate — which had VAT inside it — as fully net. Measured: a 11,100,000 line
+	carrying 1,100,000 of VAT becomes a DPP of 11,100,000 instead of 10,000,000,
+	so the bendahara is billed VAT on the VAT and the faktur over-reports.
+
+	In substance: WAPU means the buyer pays the PPN to the state themselves. A
+	price with the PPN folded inside it is a price that has already collected the
+	tax, which is precisely what a pemungut sale does not do. There is no correct
+	way to have both, so this refuses rather than picking a number."""
+	inclusive = [
+		r for r in (doc.get("taxes") or [])
+		if cint(r.included_in_print_rate) and r.account_head in _output_vat_accounts(doc.company)
+	]
+	if not inclusive:
+		return
+	frappe.throw(
+		frappe._(
+			"{0} is marked tax-inclusive, and this is a government (pemungut/WAPU) buyer who "
+			"pays the PPN themselves. Use a tax template whose PPN is added on top."
+		).format(", ".join(sorted({r.description or r.account_head for r in inclusive}))),
+		title=frappe._("Government buyer"),
+	)
 
 
 def govt_rows_for(taxes_and_charges, company):

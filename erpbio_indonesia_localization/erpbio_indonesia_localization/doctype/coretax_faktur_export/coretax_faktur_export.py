@@ -255,8 +255,8 @@ class CoretaxFakturExport(Document):
 		if not (si.eil_kode_transaksi or settings.default_transaction_code):
 			problems.append(_("no transaction code"))
 
-		id_type = frappe.db.get_value("Customer", si.customer, "eil_id_type") or "TIN"
-		buyer_npwp = _digits(si.tax_id or frappe.db.get_value("Customer", si.customer, "tax_id"))
+		buyer = self._buyer_bits(si)
+		id_type, buyer_npwp = buyer["id_type"], buyer["npwp"]
 		if id_type in ("TIN", "NIK") and not buyer_npwp:
 			problems.append(_("buyer has no NPWP/NIK (Customer Tax ID)"))
 
@@ -636,7 +636,11 @@ class CoretaxFakturExport(Document):
 			as_dict=True,
 		) or frappe._dict()
 		settings_country = frappe.db.get_single_value("Indonesia Tax Settings", "default_buyer_country")
-		npwp = _digits(si.tax_id or customer.tax_id)
+		# The document wins over the master for all three parts of the identity,
+		# because they have to agree: an invoice carrying a NIK while the customer
+		# is still marked TIN would export a NIK labelled as an NPWP. Blank on the
+		# document means "whatever the Customer says", which is the usual case.
+		npwp = _digits(si.get("tax_id") or customer.tax_id)
 		return {
 			"npwp": npwp,
 			# The registered name, not the trading name the reps use: "RS Columbia Asia
@@ -649,8 +653,8 @@ class CoretaxFakturExport(Document):
 			# is name, address and NPWP as registered. Blank falls back to the
 			# invoice's address, which is what went out before this field existed.
 			"address": _one_line(si.get("eil_tax_address")) or _one_line(customer.eil_tax_address) or _strip_html(si.address_display) or "-",
-			"id_type": customer.eil_id_type or "TIN",
-			"document_number": customer.eil_document_number or "-",
+			"id_type": si.get("eil_id_type") or customer.eil_id_type or "TIN",
+			"document_number": si.get("eil_document_number") or customer.eil_document_number or "-",
 			"country": customer.eil_country_code or settings_country or "IDN",
 			"email": customer.eil_tax_email or "",
 			"idtku": _digits(customer.eil_nitku) or (npwp + "000000" if npwp else ""),
