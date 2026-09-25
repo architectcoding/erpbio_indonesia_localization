@@ -52,6 +52,7 @@ def before_validate(doc, method=None):
 	if doc.get("is_return"):
 		return
 	_derive_pemungut(doc)
+	_default_pemungut_kode(doc)
 	if not doc.get("eil_is_pemungut"):
 		return
 	_refuse_inclusive_vat(doc)
@@ -399,6 +400,32 @@ def _derive_pemungut(doc):
 	doc.eil_is_pemungut = 1 if is_pemungut_customer(doc.customer) else 0
 
 
+def pemungut_transaction_code():
+	"""The faktur code a sale to a pemungut is filed under, from Indonesia Tax
+	Settings -- 02 (instansi pemerintah) unless the site says otherwise."""
+	return frappe.get_cached_doc("Indonesia Tax Settings").get("pemungut_transaction_code") or "02"
+
+
+def _default_pemungut_kode(doc):
+	"""A sale to a pemungut is filed under its own transaction code, set when
+	the flag is. Left blank it exported as the default 01, declaring the PPN the
+	bendahara deposits as PPN we collected (T-002). Only a blank is filled: a
+	code the accountant chose -- 03 for a BUMN -- stays. When the flag comes off
+	a stored invoice (its customer changed), the code the flag put there goes
+	with it."""
+	code = pemungut_transaction_code()
+	if doc.get("eil_is_pemungut"):
+		if not doc.get("eil_kode_transaksi"):
+			doc.eil_kode_transaksi = code
+		return
+	if (
+		not doc.is_new()
+		and doc.get("eil_kode_transaksi") == code
+		and cint(frappe.db.get_value("Sales Invoice", doc.name, "eil_is_pemungut"))
+	):
+		doc.eil_kode_transaksi = None
+
+
 def validate(doc, method=None):
 	"""Runs after the totals are computed, so the DPP base is final.
 
@@ -461,15 +488,84 @@ def on_submit(doc, method=None):
 	je = _build_reclassification(doc)
 	if je:
 		doc.db_set("eil_wapu_journal_entry", je, update_modified=False)
+		try:
+			_expect_bukti_potong(doc)
+		except Exception:
+			frappe.log_error(title="Bukti Potong auto-create failed", message=frappe.get_traceback())
 
 
 def on_cancel(doc, method=None):
 	"""The reclassification only exists to qualify this invoice — it goes with it."""
+	_forget_bukti_potong(doc)
 	name = doc.get("eil_wapu_journal_entry")
 	if not name or not frappe.db.exists("Journal Entry", name):
 		return
 	if frappe.db.get_value("Journal Entry", name, "docstatus") == 1:
 		frappe.get_doc("Journal Entry", name).cancel()
+
+
+BP_TAX_TYPES = ("PPh 22", "PPh 23", "PPh 4(2)")
+
+
+def _expect_bukti_potong(doc):
+	"""The PPh a government buyer withholds on this sale is a certificate we
+	are owed: one Expected Bukti Potong per withholding row the reclassification
+	posted, linked to the invoice. Until now only a Payment Entry deduction made
+	one, and a WAPU sale books its PPh 22 here, on the invoice (T-009). What an
+	advance already withheld has its own certificate from that payment, and the
+	row's amount is already net of it (see validate)."""
+	from erpbio_indonesia_localization.doc_events.payment_entry import _withholding_map
+
+	mapping = _withholding_map("Received")
+	for row in _charges(doc):
+		if cint(row.clear_on_payment) or not row.account or flt(row.amount) <= 0:
+			continue
+		rule = mapping.get(row.account) or {}
+		tax_type = rule.get("tax_type") or next(
+			(t for t in BP_TAX_TYPES if t.lower() in (row.description or "").lower()), "PPh 22"
+		)
+		if frappe.db.exists(
+			"Bukti Potong",
+			{"sales_invoice": doc.name, "payment_entry": ["is", "not set"], "tax_type": tax_type, "auto_created": 1},
+		):
+			continue  # amended and resubmitted -- don't double up
+		rate = flt(row.rate) or flt(rule.get("rate"))
+		bp = frappe.new_doc("Bukti Potong")
+		bp.update({
+			"company": doc.company,
+			"direction": "Received",
+			"customer": doc.customer,
+			"sales_invoice": doc.name,
+			"tax_type": tax_type,
+			"tax_object_code": rule.get("tax_object_code"),
+			"withholding_date": doc.posting_date,
+			"rate": rate,
+			"tax_amount": flt(row.amount),
+			"gross_amount": flt(row.amount * 100.0 / rate, 2) if rate else flt(dpp_base_for(doc, row)),
+			"auto_created": 1,
+			"notes": frappe._("Auto-created from Sales Invoice {0}: {1} withheld by the government buyer.").format(
+				doc.name, row.description or row.account
+			),
+		})
+		bp.flags.ignore_permissions = True
+		bp.insert()
+
+
+def _forget_bukti_potong(doc):
+	"""Unnumbered certificates this invoice expected go with it; a numbered one
+	stays -- the paper exists regardless of the invoice."""
+	try:
+		for name in frappe.get_all(
+			"Bukti Potong",
+			filters={
+				"sales_invoice": doc.name, "payment_entry": ["is", "not set"], "auto_created": 1,
+				"status": ["in", ["Expected", "To Report"]],
+			},
+			pluck="name",
+		):
+			frappe.delete_doc("Bukti Potong", name, force=1, ignore_permissions=True)
+	except Exception:
+		frappe.log_error(title="Bukti Potong auto-cleanup failed", message=frappe.get_traceback())
 
 
 def _postable_rows(doc):

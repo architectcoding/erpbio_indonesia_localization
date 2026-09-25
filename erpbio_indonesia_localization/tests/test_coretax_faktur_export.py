@@ -728,26 +728,27 @@ class TestValidationGates(_ExportCase):
 		_, row = self._row_for(si.name)
 		self.assertEqual(row.kode_transaksi, "02")
 
-	def test_a_grand_total_discount_is_blocked_because_the_invoice_taxes_the_wrong_base(self):
-		"""ERPNext's default, `Apply Discount On: Grand Total`, computes the PPN
-		on the full net total and only then takes the discount off the grand
-		total. The invoice therefore charges 11% of a base it did not sell at:
-		on 3 x 10,000,000 less 10,000 the buyer is billed Rp 3,300,000 of PPN
-		while the lines come to a DPP of 29,990,990.99, whose PPN is
-		Rp 3,299,009.01.
+	def test_a_grand_total_discount_files_the_ppn_the_ledger_posted(self):
+		"""`Apply Discount On: Grand Total` spreads the discount over the net
+		lines AND the tax: on 3 x 10,000,000 less 10,000 the lines come to a DPP
+		of 29,990,990.99, the PPN row posts 3,299,009.01 after the discount, and
+		the ledger credits exactly that. The faktur states the same.
 
-		Filing that faktur would over-declare output tax and disagree with the
-		invoice the buyer holds. Discounting on Net Total moves the base and the
-		two agree again — which is what the rest of the discount tests use."""
+		This test used to assert the opposite -- that such an invoice is refused
+		because it "taxes the wrong base" -- because the check read the tax row's
+		pre-discount figure (3,300,000). Faktur, ledger and the buyer's total all
+		agree; the refusal was the bug (T-010)."""
 		si = self._invoice(
 			[(self.goods, 3, 10_000_000, "Unit")],
 			template=self.template_ppn,
 			apply_discount_on="Grand Total",
 			discount_amount=10_000,
 		)
+		posted = flt(sum(flt(t.base_tax_amount_after_discount_amount) for t in si.taxes), 2)
+		faktur = flt(sum(line["ppn"] for line in self._lines(si)), 2)
+		self.assertLessEqual(abs(faktur - posted), 1, f"faktur {faktur} vs posted {posted}")
 		_, row = self._row_for(si.name)
-		self.assertFalse(row.ok)
-		self.assertIn("does not match", row.message)
+		self.assertTrue(row.ok, f"refused although faktur and ledger agree (T-010): {row.message}")
 
 	def test_a_faktur_that_reports_more_ppn_than_the_invoice_charged_is_blocked(self):
 		"""An invoice with no PPN at all would still produce a faktur claiming

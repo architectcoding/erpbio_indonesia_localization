@@ -1371,3 +1371,91 @@ msgstr "Jenis Voucher"
 #: erpbio_indonesia_localization/erpbio_indonesia_localization/report/ppn_keluaran/ppn_keluaran.py
 msgid "Uang Muka"
 msgstr "Uang Muka"
+
+#: erpbio_indonesia_localization/api/tax.py
+msgid "PPN dipungut sendiri"
+msgstr "PPN dipungut sendiri"
+
+#: erpbio_indonesia_localization/api/tax.py
+msgid "PPN dipungut oleh Pemungut"
+msgstr "PPN dipungut oleh Pemungut"
+
+#: erpbio_indonesia_localization/api/tax.py
+msgid "PPN tidak dipungut"
+msgstr "PPN tidak dipungut"
+
+#: erpbio_indonesia_localization/api/tax.py
+msgid "Dibebaskan dari PPN"
+msgstr "Dibebaskan dari PPN"
+
+#: erpbio_indonesia_localization/api/tax.py
+msgid "Other / unknown code"
+msgstr "Lainnya / kode tidak dikenal"
+
+#: erpbio_indonesia_localization/report/ppn_masukan/ppn_masukan.py
+msgid "Why not creditable"
+msgstr "Alasan tidak dapat dikreditkan"
+
+#: erpbio_indonesia_localization/report/ppn_masukan/ppn_masukan.py
+msgid "No PPN on the invoice"
+msgstr "Tidak ada PPN pada faktur"
+
+#: erpbio_indonesia_localization/report/ppn_masukan/ppn_masukan.py
+msgid "Marked not creditable"
+msgstr "Ditandai tidak dapat dikreditkan"
+
+#: erpbio_indonesia_localization/report/ppn_masukan/ppn_masukan.py
+msgid "No supplier faktur number"
+msgstr "Tidak ada nomor faktur dari pemasok"
+
+#: erpbio_indonesia_localization/report/ppn_masukan/ppn_masukan.py
+msgid "Faktur is more than {0} tax periods old"
+msgstr "Faktur sudah lebih dari {0} masa pajak"
+
+#: erpbio_indonesia_localization/report/ppn_keluaran/ppn_keluaran.py
+msgid "PPN on Invoice"
+msgstr "PPN pada Faktur Penjualan"
+
+#: erpbio_indonesia_localization/doctype/coretax_faktur_export/coretax_faktur_export.py
+msgid "kode {0} needs its Keterangan Tambahan and Cap Fasilitas (from Coretax's list)"
+msgstr "kode {0} memerlukan Keterangan Tambahan dan Cap Fasilitas (dari daftar Coretax)"
+
+#: erpbio_indonesia_localization/doctype/coretax_faktur_import/coretax_faktur_import.py
+msgid "Coretax marked this faktur invalid ({0}) — correct the invoice, then release and export it again"
+msgstr "Coretax menandai faktur ini tidak valid ({0}) — perbaiki faktur penjualannya, lalu lepaskan dan ekspor ulang"
+
+#: erpbio_indonesia_localization/doc_events/sales_invoice.py
+msgid "Auto-created from Sales Invoice {0}: {1} withheld by the government buyer."
+msgstr "Dibuat otomatis dari Faktur Penjualan {0}: {1} dipotong oleh pembeli instansi pemerintah."
+
+#: erpbio_indonesia_localization/doctype/indonesia_tax_settings/indonesia_tax_settings.json
+msgid "Transaction Code for Pemungut Buyers"
+msgstr "Kode Transaksi untuk Pembeli Pemungut"
+
+#: erpbio_indonesia_localization/doctype/indonesia_tax_settings/indonesia_tax_settings.json
+msgid "Applied to a Sales Invoice for a pemungut buyer that doesn't set one. 02 = instansi pemerintah (bendahara); switch an invoice to 03 for a BUMN or other pemungut."
+msgstr "Dipakai pada Faktur Penjualan untuk pembeli pemungut yang belum mengisinya. 02 = instansi pemerintah (bendahara); ubah faktur menjadi 03 untuk BUMN atau pemungut lainnya."
+
+#: erpbio_indonesia_localization/setup/install.py
+msgid "Keterangan Tambahan (Facility)"
+msgstr "Keterangan Tambahan (Fasilitas)"
+
+#: erpbio_indonesia_localization/setup/install.py
+msgid "Cap Fasilitas"
+msgstr "Cap Fasilitas"
+
+#: erpbio_indonesia_localization/setup/install.py
+msgid "Required for kode 07/08: the facility reference code from Coretax's list."
+msgstr "Wajib untuk kode 07/08: kode referensi fasilitas dari daftar Coretax."
+
+#: erpbio_indonesia_localization/setup/install.py
+msgid "Required for kode 07/08: the facility stamp code from Coretax's list."
+msgstr "Wajib untuk kode 07/08: kode cap fasilitas dari daftar Coretax."
+
+#: erpbio_indonesia_localization/doc_events/sales_invoice.py
+msgid "{0} is marked tax-inclusive, and this is a government (pemungut/WAPU) buyer who pays the PPN themselves. Use a tax template whose PPN is added on top."
+msgstr "{0} ditandai sudah termasuk pajak, sedangkan pembeli ini instansi pemerintah (pemungut/WAPU) yang menyetor PPN-nya sendiri. Gunakan template pajak dengan PPN ditambahkan di atas harga."
+
+#: erpbio_indonesia_localization/doc_events/sales_invoice.py
+msgid "Government buyer"
+msgstr "Pembeli instansi pemerintah"

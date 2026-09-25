@@ -1,7 +1,9 @@
 # PPN Keluaran (output VAT) register: the period's Sales Invoices with their
-# DPP / DPP Nilai Lain / PPN as the exporter computes them, alongside each
-# invoice's e-Faktur number and status — the working paper an accountant
-# reconciles against Coretax before (and after) filing the period.
+# DPP / DPP Nilai Lain / PPN as the exporter computes them -- its own faktur
+# lines, one source, so a 12% template, a taxed freight charge or a faktur
+# pelunasan reads here exactly as it files (T-008) -- beside the PPN the invoice
+# itself charged, and each invoice's e-Faktur number and status: the working
+# paper an accountant reconciles against Coretax before (and after) filing.
 #
 # A down payment that booked its own PPN (a termin paid from a Partial Invoice:
 # Dr Bank / Cr Uang Muka / Cr PPN Keluaran) is output VAT of the month the money
@@ -30,6 +32,7 @@ def get_columns():
 		{"fieldname": "dpp", "label": _("DPP"), "fieldtype": "Currency", "width": 130},
 		{"fieldname": "dpp_nilai_lain", "label": _("DPP Nilai Lain"), "fieldtype": "Currency", "width": 130},
 		{"fieldname": "ppn", "label": _("PPN"), "fieldtype": "Currency", "width": 120},
+		{"fieldname": "ppn_invoice", "label": _("PPN on Invoice"), "fieldtype": "Currency", "width": 120},
 		{"fieldname": "faktur_number", "label": _("Nomor Faktur"), "fieldtype": "Data", "width": 160},
 		{"fieldname": "faktur_status", "label": _("e-Faktur Status"), "fieldtype": "Data", "width": 110},
 		{"fieldname": "bukti_setor_status", "label": _("Bukti Setor"), "fieldtype": "Data", "width": 100},
@@ -68,12 +71,12 @@ def get_data(filters):
 	)
 
 	effective = tarif / 100.0 * (num / den if use_lain else 1.0)
-	advance_ppn = _advance_ppn_taken_off([si.name for si in invoices])
+	exporter = frappe.new_doc("Coretax Faktur Export")
 
 	data = []
 	for si in invoices:
-		dpp = flt(flt(si.base_net_total) - advance_ppn.get(si.name, 0) / effective, 2)
-		dpp_lain = flt(dpp * num / den, 2) if use_lain else dpp
+		doc = frappe.get_doc("Sales Invoice", si.name)
+		dpp, dpp_lain, ppn = _faktur_figures(exporter, doc, settings)
 		data.append(
 			{
 				"voucher_type": "Sales Invoice",
@@ -84,7 +87,8 @@ def get_data(filters):
 				"kode_transaksi": si.eil_kode_transaksi or settings.default_transaction_code,
 				"dpp": dpp,
 				"dpp_nilai_lain": dpp_lain,
-				"ppn": flt(dpp_lain * tarif / 100.0, 2),
+				"ppn": ppn,
+				"ppn_invoice": _invoice_ppn(doc),
 				"faktur_number": si.eil_faktur_number or "",
 				"faktur_status": si.eil_faktur_status or _("Not Exported"),
 				"bukti_setor_status": (si.eil_bukti_setor_status or _("Belum Diterima")) if si.eil_kode_transaksi == "02" else "",
@@ -102,25 +106,23 @@ def _output_vat(company):
 	return _output_vat_accounts(company)
 
 
-def _advance_ppn_taken_off(names):
-	"""{invoice: PPN already booked on its advances} — the negative Actual rows
-	on output-VAT accounts (see doc_events.sales_invoice.is_advance_vat_row)."""
-	from erpbio_indonesia_localization.doc_events.sales_invoice import is_advance_vat_row
-
-	if not names:
-		return {}
-	rows = frappe.get_all(
-		"Sales Taxes and Charges",
-		filters={"parenttype": "Sales Invoice", "parent": ["in", names], "charge_type": "Actual", "tax_amount": ["<", 0]},
-		fields=["parent", "charge_type", "account_head", "tax_amount", "base_tax_amount"],
+def _faktur_figures(exporter, si, settings):
+	"""(DPP, DPP Nilai Lain, PPN) as the export files this invoice: the sum of
+	its faktur lines -- items, taxed charges, a pelunasan's advance off."""
+	lines = exporter._faktur_lines(si, settings)
+	return (
+		flt(sum(flt(line["dpp"]) for line in lines), 2),
+		flt(sum(flt(line["dpp_lain"]) for line in lines), 2),
+		flt(sum(flt(line["ppn"]) for line in lines), 2),
 	)
-	companies = dict(frappe.get_all("Sales Invoice", filters={"name": ["in", list({r.parent for r in rows})]}, fields=["name", "company"], as_list=True)) if rows else {}
-	out = {}
-	for r in rows:
-		if is_advance_vat_row(r, _output_vat(companies.get(r.parent))):
-			out[r.parent] = out.get(r.parent, 0) - flt(r.base_tax_amount or r.tax_amount)
-	return out
 
+
+def _invoice_ppn(si):
+	from erpbio_indonesia_localization.erpbio_indonesia_localization.doctype.coretax_faktur_export.coretax_faktur_export import (
+		_invoice_ppn as charged,
+	)
+
+	return charged(si)
 
 def _advance_rows(filters, settings, effective, num, den, use_lain):
 	"""Receipts that booked output VAT themselves: the faktur uang muka."""

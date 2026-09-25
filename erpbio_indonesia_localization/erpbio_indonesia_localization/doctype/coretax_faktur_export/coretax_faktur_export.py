@@ -77,10 +77,51 @@ def _invoice_ppn(si):
 			2,
 		)
 	accounts = _output_vat_accounts(si.company)
-	return flt(
-		sum(flt(r.base_tax_amount or r.tax_amount) for r in (si.get("taxes") or []) if r.account_head in accounts),
-		2,
+	return flt(sum(_posted_tax(r) for r in (si.get("taxes") or []) if r.account_head in accounts), 2)
+
+
+def _posted_tax(row):
+	"""What a tax row posted: after a Grand-Total discount, which the ledger
+	credits and the faktur lines (discounted net) state -- not the pre-discount
+	figure, which refused every such invoice (T-010)."""
+	after = row.get("base_tax_amount_after_discount_amount")
+	if after is None:
+		after = row.get("tax_amount_after_discount_amount")
+	if after is not None:
+		return flt(after)
+	return flt(row.get("base_tax_amount") or row.get("tax_amount"))
+
+
+# A facility faktur: kode 07 (PPN tidak dipungut) and 08 (dibebaskan). The
+# invoice charges no PPN; the faktur still states the DPP and the PPN the
+# facility covers, with the facility named (T-003).
+FACILITY_CODES = ("07", "08")
+
+
+def _faktur_code(si, settings):
+	return str(si.get("eil_kode_transaksi") or settings.default_transaction_code or "").strip()
+
+
+def _invoice_vat_rate(si):
+	"""The rate the invoice's own PPN is charged at -- 11 on the full price
+	(the flat template, filed as 12% on a DPP Nilai Lain of 11/12) or 12 (the
+	full-DPP template, filed as 12% on the full price). None when it charges
+	none, or cannot say."""
+	from erpbio_indonesia_localization.doc_events.sales_invoice import (
+		PPN_TREATMENT,
+		_output_vat_accounts,
 	)
+
+	if cint(si.get("eil_is_pemungut")):
+		rates = [flt(r.rate) for r in (si.get("eil_govt_charges") or []) if r.treatment == PPN_TREATMENT and flt(r.rate)]
+	else:
+		accounts = _output_vat_accounts(si.company) if si.get("company") else set()
+		rates = [
+			flt(r.rate)
+			for r in (si.get("taxes") or [])
+			if r.account_head in accounts and r.charge_type != "Actual" and flt(r.rate) > 0
+		]
+	return max(rates) if rates else None
 
 
 def _charge_mappings():
@@ -254,6 +295,12 @@ class CoretaxFakturExport(Document):
 			problems.append(_("already {0}").format(si.eil_faktur_status))
 		if not (si.eil_kode_transaksi or settings.default_transaction_code):
 			problems.append(_("no transaction code"))
+		if _faktur_code(si, settings) in FACILITY_CODES and not (
+			(si.get("eil_add_info") or "").strip() and (si.get("eil_facility_stamp") or "").strip()
+		):
+			problems.append(_("kode {0} needs its Keterangan Tambahan and Cap Fasilitas (from Coretax's list)").format(
+				_faktur_code(si, settings)
+			))
 
 		buyer = self._buyer_bits(si)
 		id_type, buyer_npwp = buyer["id_type"], buyer["npwp"]
@@ -292,6 +339,8 @@ class CoretaxFakturExport(Document):
 				)
 		if problems:
 			return problems  # the totals cannot balance while a line is missing
+		if _faktur_code(si, settings) in FACILITY_CODES:
+			return problems  # the faktur states the PPN the facility covers; the invoice charges none
 
 		invoice_ppn = _invoice_ppn(si)
 		faktur_ppn = flt(sum(line["ppn"] for line in self._faktur_lines(si, settings)), 2)
@@ -350,6 +399,33 @@ class CoretaxFakturExport(Document):
 		self.db_set("status", "Generated")
 		return {"file_url": file_doc.file_url, "invoices": len(valid_rows)}
 
+	def release(self):
+		"""Put this export's documents that are still "Exported" back to "Not
+		Exported", so a file Coretax rejected -- a wrong unit code, a bad NPWP --
+		can be fixed and exported again. A faktur Coretax already approved is
+		never touched; only the import moves that (T-005). Returns what moved."""
+		sources = faktur_sources()
+		released = []
+		for row in self.invoices:
+			if row.sales_invoice:
+				if frappe.db.get_value("Sales Invoice", row.sales_invoice, "eil_faktur_status") == "Exported":
+					frappe.db.set_value(
+						"Sales Invoice", row.sales_invoice, "eil_faktur_status", "Not Exported", update_modified=False
+					)
+					released.append(row.sales_invoice)
+			elif row.reference_name and row.reference_doctype in sources:
+				source = sources[row.reference_doctype]
+				if (source.faktur_document(row.reference_name) or {}).get("eil_faktur_status") == "Exported":
+					source.mark(row.reference_name, "Not Exported")
+					released.append(row.reference_name)
+		if self.status == "Generated":
+			self.db_set("status", "Draft")
+		return released
+
+	def on_trash(self):
+		# a deleted export leaves no file behind to have filed its documents
+		self.release()
+
 	def _faktur_doc(self, row):
 		if row.sales_invoice:
 			return frappe.get_doc("Sales Invoice", row.sales_invoice)
@@ -384,6 +460,7 @@ class CoretaxFakturExport(Document):
 		part of the line not billed on this termin — the same way."""
 		from erpbio_indonesia_localization.doc_events.sales_invoice import taxable_charge_rows
 
+		settings = self._line_settings(si, settings)
 		less = _spread(self._advance_dpp(si, settings), [flt(item.net_amount, 2) for item in si.items])
 		lines = [
 			self._line_values(item, settings, less=flt(share + flt(item.get("_less")), 2))
@@ -415,6 +492,19 @@ class CoretaxFakturExport(Document):
 				)
 			)
 		return lines
+
+	def _line_settings(self, si, settings):
+		"""The settings this invoice's lines are computed with. DPP Nilai Lain
+		(12% on 11/12) is how an 11% flat template reaches the right rupiah; an
+		invoice already charging the full 12% files the full price, or its faktur
+		would state 110 of PPN against the 120 it charged (T-003)."""
+		rate = _invoice_vat_rate(si)
+		tarif = flt(settings.tarif_ppn) or 12.0
+		if not settings.use_dpp_nilai_lain or not rate or rate < tarif - 0.001:
+			return settings
+		plain = frappe._dict(settings.as_dict() if hasattr(settings, "as_dict") else settings)
+		plain.use_dpp_nilai_lain = 0
+		return plain
 
 	def _advance_dpp(self, si, settings):
 		"""The DPP of advances whose PPN this invoice takes off its own, read back
@@ -490,10 +580,10 @@ class CoretaxFakturExport(Document):
 					getdate(si.posting_date).strftime("%d/%m/%Y"),
 					"Pengganti" if si.eil_pengganti else "Normal",
 					si.eil_kode_transaksi or settings.default_transaction_code,
-					"",  # Keterangan Tambahan (facility invoices — later phase)
+					(si.get("eil_add_info") or "").strip(),  # Keterangan Tambahan (kode 07/08)
 					"",  # Dokumen Pendukung
 					si.name,  # Referensi: trace the faktur back to the ERP invoice
-					"",  # Cap Fasilitas
+					(si.get("eil_facility_stamp") or "").strip(),  # Cap Fasilitas (kode 07/08)
 					seller_idtku,
 					buyer["npwp"],
 					buyer["id_type"],
@@ -581,10 +671,10 @@ class CoretaxFakturExport(Document):
 			ET.SubElement(inv, "TaxInvoiceDate").text = str(getdate(si.posting_date))
 			ET.SubElement(inv, "TaxInvoiceOpt").text = "Pengganti" if si.eil_pengganti else "Normal"
 			ET.SubElement(inv, "TrxCode").text = si.eil_kode_transaksi or settings.default_transaction_code
-			ET.SubElement(inv, "AddInfo")
+			ET.SubElement(inv, "AddInfo").text = (si.get("eil_add_info") or "").strip() or None
 			ET.SubElement(inv, "CustomDoc")
 			ET.SubElement(inv, "RefDesc").text = si.name
-			ET.SubElement(inv, "FacilityStamp")
+			ET.SubElement(inv, "FacilityStamp").text = (si.get("eil_facility_stamp") or "").strip() or None
 			ET.SubElement(inv, "SellerIDTKU").text = seller_idtku
 			ET.SubElement(inv, "BuyerTin").text = buyer["npwp"]
 			ET.SubElement(inv, "BuyerDocument").text = buyer["id_type"]

@@ -61,7 +61,7 @@ class CoretaxFakturImport(Document):
 			djp_status = _cell(raw, cols["status"])
 			mapped = _map_status(djp_status, number)
 
-			ok, doctype, si_name, message = self._match(referensi, number, mapped)
+			ok, doctype, si_name, message = self._match(referensi, number, mapped, djp_status)
 			if ok:
 				matched += 1
 			self.append(
@@ -87,7 +87,7 @@ class CoretaxFakturImport(Document):
 		self.save()
 		return {"total": len(self.rows), "matched": matched}
 
-	def _match(self, referensi, number, mapped):
+	def _match(self, referensi, number, mapped, djp_status=None):
 		"""(ok, doctype, name, message). The Referensi is a Sales Invoice's name,
 		or a source document's (a DP invoice's faktur uang muka — eil_faktur_sources)."""
 		from erpbio_indonesia_localization.erpbio_indonesia_localization.doctype.coretax_faktur_export.coretax_faktur_export import (
@@ -107,6 +107,12 @@ class CoretaxFakturImport(Document):
 		if not number:
 			return False, doctype, referensi, _("row has no faktur number")
 		if not mapped:
+			# SAVED_INVALID never becomes final: Coretax refused the faktur as
+			# saved, so it is a problem to fix and export again, not a wait (T-013)
+			if "INVALID" in str(djp_status or "").upper():
+				return False, doctype, referensi, _(
+					"Coretax marked this faktur invalid ({0}) — correct the invoice, then release and export it again"
+				).format(djp_status)
 			return False, doctype, referensi, _("status not final yet — skipped")
 		existing = frappe.db.get_value(doctype, referensi, number_field)
 		if existing and existing != number:

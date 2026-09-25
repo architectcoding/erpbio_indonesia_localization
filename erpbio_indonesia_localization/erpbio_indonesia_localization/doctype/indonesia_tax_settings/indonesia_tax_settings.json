@@ -16,6 +16,7 @@
   "withholding_accounts",
   "pemungut_section",
   "pemungut_customer_groups",
+  "pemungut_transaction_code",
   "output_vat_accounts",
   "govt_tax_defaults",
   "taxable_charge_section",
@@ -100,6 +101,14 @@
    "options": "EIL Pemungut Customer Group"
   },
   {
+   "default": "02",
+   "description": "Applied to a Sales Invoice for a pemungut buyer that doesn't set one. 02 = instansi pemerintah (bendahara); switch an invoice to 03 for a BUMN or other pemungut.",
+   "fieldname": "pemungut_transaction_code",
+   "fieldtype": "Link",
+   "label": "Transaction Code for Pemungut Buyers",
+   "options": "Coretax Transaction Code"
+  },
+  {
    "fieldname": "output_vat_accounts",
    "fieldtype": "Table MultiSelect",
    "label": "Output VAT Accounts",
@@ -149,7 +158,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-09-21 06:35:00.000000",
+ "modified": "2026-09-25 13:45:00.000000",
  "modified_by": "Administrator",
  "module": "ERPbio Indonesia Localization",
  "name": "Indonesia Tax Settings",
@@ -172,6 +181,20 @@
    "role": "Accounts Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "share": 1,
+   "role": "Accounts User"
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "share": 1,
+   "role": "Tax User"
   }
  ],
  "sort_field": "modified",

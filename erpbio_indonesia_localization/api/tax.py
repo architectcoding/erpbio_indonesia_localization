@@ -13,7 +13,7 @@ from erpbio_indonesia_localization.api.list_utils import (
 	resolve_order_by,
 	to_getlist_filters,
 )
-from frappe import _
+from frappe import _, _lt
 from frappe.utils import cint, flt
 
 
@@ -22,6 +22,23 @@ def _check(doctype, ptype="read", name=None):
 	written, so user permissions and owner-only rules apply to it and not just
 	to the doctype as a whole."""
 	if not frappe.has_permission(doctype, ptype, doc=name):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+
+TAX_USER_ROLE = "Tax User"
+
+
+def _can_write_tax_identity(doctype, name=None):
+	"""A party's tax identity is kept by whoever may edit the party -- and by a
+	Tax User, who reads parties and edits only these fields, only through the
+	save endpoints below (T-012)."""
+	if frappe.has_permission(doctype, "write", doc=name):
+		return True
+	return TAX_USER_ROLE in frappe.get_roles() and frappe.has_permission(doctype, "read", doc=name)
+
+
+def _check_tax_identity_write(doctype, name):
+	if not _can_write_tax_identity(doctype, name):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
 
@@ -165,6 +182,15 @@ def generate_export(name):
 
 
 @frappe.whitelist(methods=["POST"])
+def release_export(name):
+	"""Coretax rejected the file: put its still-Exported invoices back so they
+	can be corrected and exported again (T-005)."""
+	_check("Coretax Faktur Export", "write", name)
+	released = frappe.get_doc("Coretax Faktur Export", name).release()
+	return {"released": released, "count": len(released)}
+
+
+@frappe.whitelist(methods=["POST"])
 def generate_export_xml(name):
 	_check("Coretax Faktur Export", "write", name)
 	return frappe.get_doc("Coretax Faktur Export", name).generate_xml()
@@ -195,22 +221,63 @@ def ppn_masukan(company, from_date, to_date):
 	return {"columns": get_columns(), "data": get_data(filters)}
 
 
+# SPT Masa PPN groups the month's fakturs by who settles the PPN. Only what we
+# collected ourselves is payable; what a pemungut collects (02/03), what is not
+# collected (07) and what is exempt (08) is reported but never owed (T-007).
+SPT_LINES = (
+	("self", _lt("PPN dipungut sendiri"), ("01", "04", "05", "06", "09", "10"), True),
+	("pemungut", _lt("PPN dipungut oleh Pemungut"), ("02", "03"), False),
+	("not_collected", _lt("PPN tidak dipungut"), ("07",), False),
+	("exempt", _lt("Dibebaskan dari PPN"), ("08",), False),
+)
+
+
+def _spt_line(row, pemungut_invoices):
+	"""Which SPT line a PPN Keluaran row belongs to. An invoice flagged as a
+	pemungut sale counts as one whatever its code says: invoices raised before
+	the code was derived from the flag carry the default 01 (T-002)."""
+	if row.get("sales_invoice") in pemungut_invoices:
+		return "pemungut"
+	code = str(row.get("kode_transaksi") or "").strip()[:2]
+	return next((key for key, _label, codes, _payable in SPT_LINES if code in codes), "unclassified")
+
+
 @frappe.whitelist()
 def spt_masa(company, from_date, to_date):
-	"""The month's PPN position: Keluaran − creditable Masukan = kurang (pay) /
-	lebih (carry forward) bayar."""
+	"""The month's PPN position: PPN we collected ourselves − creditable Masukan
+	= kurang (pay) / lebih (carry forward) bayar. The other lines are what the
+	SPT reports without owing it."""
 	_check("Sales Invoice")
 	_check("Purchase Invoice")
 	keluaran = ppn_keluaran(company, from_date, to_date)["data"]
 	masukan = ppn_masukan(company, from_date, to_date)["data"]
-	total_keluaran = sum(flt(r["ppn"]) for r in keluaran)
+	names = [r.get("sales_invoice") for r in keluaran if r.get("sales_invoice")]
+	pemungut_invoices = set(
+		frappe.get_all("Sales Invoice", filters={"name": ["in", names], "eil_is_pemungut": 1}, pluck="name")
+	) if names else set()
+
+	lines = {
+		key: {"key": key, "label": _(label), "codes": list(codes), "payable": payable, "count": 0, "dpp": 0.0, "ppn": 0.0}
+		for key, label, codes, payable in SPT_LINES
+	}
+	# a code outside the table is still PPN on a faktur: counted as payable and
+	# shown on its own line, so it is looked at rather than quietly dropped
+	lines["unclassified"] = {"key": "unclassified", "label": _("Other / unknown code"), "codes": [], "payable": True, "count": 0, "dpp": 0.0, "ppn": 0.0}
+	for r in keluaran:
+		line = lines[_spt_line(r, pemungut_invoices)]
+		line["count"] += 1
+		line["dpp"] += flt(r.get("dpp"))
+		line["ppn"] += flt(r.get("ppn"))
+
+	payable = sum(line["ppn"] for line in lines.values() if line["payable"])
 	total_masukan = sum(flt(r["ppn"]) for r in masukan if r.get("creditable"))
 	return {
-		"keluaran": total_keluaran,
-		"keluaran_count": len(keluaran),
+		"keluaran": flt(payable, 2),
+		"keluaran_count": sum(line["count"] for line in lines.values() if line["payable"]),
+		"keluaran_lines": [line for line in lines.values() if line["count"] or line["key"] != "unclassified"],
 		"masukan": total_masukan,
 		"masukan_count": len(masukan),
-		"net": flt(total_keluaran - total_masukan, 2),
+		"net": flt(payable - total_masukan, 2),
 	}
 
 
@@ -1222,7 +1289,7 @@ def list_customers(txt=None, filters=None, order_by=None, start=0, page_length=2
 		"items": rows,
 		"total": total,
 		"has_next": has_next,
-		"meta": {"can_write": frappe.has_permission("Customer", "write")},
+		"meta": {"can_write": _can_write_tax_identity("Customer")},
 		**list_meta(),
 	}
 
@@ -1275,7 +1342,7 @@ def get_customer_tax(name):
 			"name": row.get("eil_tax_name") or row.get("customer_name") or name,
 			"address": " ".join((row.get("eil_tax_address") or "").split()),
 		},
-		"can_write": frappe.has_permission("Customer", "write", doc=name),
+		"can_write": _can_write_tax_identity("Customer", name),
 	}
 
 
@@ -1287,8 +1354,10 @@ def save_customer_tax(payload):
 	name = payload.get("name")
 	if not name:
 		frappe.throw(_("Customer is required."))
-	_check("Customer", "write", name)
+	_check_tax_identity_write("Customer", name)
 	doc = frappe.get_doc("Customer", name)
+	# the gate above is this endpoint's; only tax fields are written below
+	doc.flags.ignore_permissions = True
 	before = (doc.tax_id, doc.get("eil_id_type"))
 	for field in _present("Customer", CUSTOMER_TAX_FIELDS):
 		if field in payload:
@@ -1394,7 +1463,7 @@ def get_supplier_tax(name):
 		"doc": row,
 		"tax_status": status,
 		"tax_message": message,
-		"can_write": frappe.has_permission("Supplier", "write", doc=name),
+		"can_write": _can_write_tax_identity("Supplier", name),
 	}
 
 
@@ -1405,8 +1474,9 @@ def save_supplier_tax(payload):
 	name = payload.get("name")
 	if not name:
 		frappe.throw(_("Supplier is required."))
-	_check("Supplier", "write", name)
+	_check_tax_identity_write("Supplier", name)
 	doc = frappe.get_doc("Supplier", name)
+	doc.flags.ignore_permissions = True  # the gate above; only tax fields follow
 	before = doc.tax_id
 	for field in _present("Supplier", SUPPLIER_TAX_FIELDS):
 		if field in payload:

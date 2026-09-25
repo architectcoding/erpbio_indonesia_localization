@@ -240,6 +240,26 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Check",
 			"insert_after": "eil_kode_transaksi",
 		},
+		# A facility faktur (kode 07 PPN tidak dipungut, 08 dibebaskan) states the
+		# facility it rests on. Both are codes from Coretax's own reference list,
+		# typed as Coretax shows them; the export refuses a 07/08 invoice without
+		# them rather than filing a facility nobody named (T-003).
+		{
+			"fieldname": "eil_add_info",
+			"label": "Keterangan Tambahan (Facility)",
+			"fieldtype": "Data",
+			"insert_after": "eil_pengganti",
+			"depends_on": "eval:['07','08'].includes(doc.eil_kode_transaksi)",
+			"description": "Required for kode 07/08: the facility reference code from Coretax's list.",
+		},
+		{
+			"fieldname": "eil_facility_stamp",
+			"label": "Cap Fasilitas",
+			"fieldtype": "Data",
+			"insert_after": "eil_add_info",
+			"depends_on": "eval:['07','08'].includes(doc.eil_kode_transaksi)",
+			"description": "Required for kode 07/08: the facility stamp code from Coretax's list.",
+		},
 		{
 			"fieldname": "eil_exclude",
 			"label": "Exclude from e-Faktur Export",
@@ -542,6 +562,7 @@ def setup_eil():
 	create_custom_fields(CUSTOM_FIELDS, ignore_validate=True)
 	seed_transaction_codes()
 	seed_settings_defaults()
+	seed_tax_user_role()
 	seed_pph21_rates()
 	seed_pph21_print_formats()
 
@@ -614,7 +635,43 @@ def seed_transaction_codes():
 
 def seed_settings_defaults():
 	settings = frappe.get_single("Indonesia Tax Settings")
+	changed = False
 	if not settings.default_transaction_code and frappe.db.exists("Coretax Transaction Code", "01"):
 		settings.default_transaction_code = "01"
+		changed = True
+	# A single's field default never reaches a record that already exists.
+	if (
+		settings.meta.has_field("pemungut_transaction_code")
+		and not settings.get("pemungut_transaction_code")
+		and frappe.db.exists("Coretax Transaction Code", "02")
+	):
+		settings.pemungut_transaction_code = "02"
+		changed = True
+	if changed:
 		settings.flags.ignore_permissions = True
 		settings.save()
+
+
+TAX_USER_ROLE = "Tax User"
+# What the tax books are drawn from: a tax user reads the invoices and the
+# parties' identities without holding the accounting or sales roles (T-012).
+# Writes stay in the tax app's own field-restricted endpoints.
+TAX_USER_READS = ("Sales Invoice", "Purchase Invoice", "Customer", "Supplier")
+
+
+def seed_tax_user_role():
+	"""The Tax User role, and its read on the documents the tax books list.
+
+	The tax doctypes carry their own Tax User permissions; these four are
+	ERPNext's, so they get a Custom DocPerm row -- added once, never widened on
+	a later migrate, so an administrator who narrows it keeps the change."""
+	if not frappe.db.exists("Role", TAX_USER_ROLE):
+		frappe.get_doc({"doctype": "Role", "role_name": TAX_USER_ROLE, "desk_access": 1}).insert(ignore_permissions=True)
+	from frappe.permissions import add_permission, update_permission_property
+
+	for doctype in TAX_USER_READS:
+		if frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": TAX_USER_ROLE, "permlevel": 0}):
+			continue
+		add_permission(doctype, TAX_USER_ROLE, 0)
+		for ptype in ("report", "print", "export"):
+			update_permission_property(doctype, TAX_USER_ROLE, 0, ptype, 1, validate=False)
