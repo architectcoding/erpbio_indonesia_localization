@@ -1517,50 +1517,61 @@ def get_launcher_apps():
 
 
 # ----------------------------------------------------------------------- PPh 21
-# The verification gate is only meaningful if the numbers being verified can
-# actually be read, so the SPA gets the loaded tables verbatim plus whatever the
-# structural checks say about them.
+# The PPh 21 Setup page: the switches, the rate set in force (and any upcoming
+# one) with its tables verbatim, and what the structural checks say about them.
+RATE_SET = "EIL PPh 21 Rate Set"
+
+
+def _rate_set_card(row):
+	if not row:
+		return None
+	return {
+		"name": row.name,
+		"effective_from": str(row.effective_from),
+		"regulation": row.regulation,
+		"status": row.status,
+		"verified_by": frappe.utils.get_fullname(row.verified_by) if row.get("verified_by") else None,
+		"verified_on": str(row.verified_on) if row.get("verified_on") else None,
+		"source_file": row.get("source_file"),
+	}
+
+
+def _set_tables(name):
+	from erpbio_indonesia_localization.pph21 import rate_sets
+
+	rows = rate_sets.rows_of(name) if name else {"ter": [], "ptkp": [], "pasal17": []}
+	ter = {c: [r for r in rows["ter"] if r.category == c] for c in ("A", "B", "C", "Harian")}
+	return ter, rows["ptkp"], rows["pasal17"]
+
+
 @frappe.whitelist()
 def get_pph21_tables():
 	_check("EIL PPh 21 Settings")
+	from erpbio_indonesia_localization.pph21 import rate_sets
 	from erpbio_indonesia_localization.pph21 import tables as pph21_tables
 
 	settings = frappe.get_single("EIL PPh 21 Settings")
-	bands = {}
-	for category in ("A", "B", "C", "Harian"):
-		bands[category] = frappe.get_all(
-			"EIL TER Bracket",
-			filters={"category": category},
-			fields=["from_amount", "to_amount", "rate", "effective_from"],
-			order_by="effective_from desc, from_amount asc",
-		)
+	current = rate_sets.in_force()
+	ter, ptkp, pasal17 = _set_tables(current.name if current else None)
 	return {
 		"settings": {
 			"enabled": cint(settings.enabled),
-			"tables_verified": cint(settings.tables_verified),
+			# live, not the stored mirror: a Draft set can come into force overnight
+			"tables_verified": 1 if current and current.status == "Verified" else 0,
 			"tables_source": settings.tables_source,
 			"pph21_component": settings.pph21_component,
 			"biaya_jabatan_percent": flt(settings.biaya_jabatan_percent),
 			"biaya_jabatan_monthly_cap": flt(settings.biaya_jabatan_monthly_cap),
 		},
-		"ter": bands,
-		"ptkp": frappe.get_all(
-			"EIL PTKP Rate",
-			fields=["ptkp_status", "annual_amount", "ter_category", "effective_from"],
-			order_by="annual_amount asc",
-		),
-		"pasal_17": frappe.get_all(
-			"EIL PPh 21 Bracket",
-			fields=["from_amount", "to_amount", "rate", "effective_from"],
-			order_by="effective_from desc, from_amount asc",
-		),
+		"rate_set": _rate_set_card(current),
+		"upcoming": [_rate_set_card(r) for r in rate_sets.upcoming()],
+		"ter": ter,
+		"ptkp": ptkp,
+		"pasal_17": pasal17,
 		# Reported rather than hidden: a table that fails these is wrong whatever
-		# its source, and the reader should see that before ticking anything.
-		"problems": pph21_tables.validate_tables(),
+		# its source, and the reader should see that before verifying anything.
+		"problems": pph21_tables.validate_tables(rate_set=current.name) if current else [],
 		"can_write": frappe.has_permission("EIL PPh 21 Settings", "write"),
-		# Who said the tables match the regulation, and who switched PPh 21 on --
-		# an attestation is only worth something with a name and a date on it.
-		"verified_change": _pph21_last_change("tables_verified"),
 		"enabled_change": _pph21_last_change("enabled"),
 		"employees": _pph21_employee_counts(),
 	}
@@ -1597,7 +1608,7 @@ PPH21_SETTING_FIELDS = ("enabled", "pph21_component", "biaya_jabatan_percent", "
 @frappe.whitelist(methods=["POST"])
 def save_pph21_settings(values):
 	"""The PPh 21 switches the tax app's page edits. Saved through the document,
-	so its validate -- component, verification and enabling rules -- applies."""
+	so its validate -- component and enabling rules -- applies."""
 	_check("EIL PPh 21 Settings", "write")
 	values = frappe.parse_json(values) or {}
 	s = frappe.get_single("EIL PPh 21 Settings")
@@ -1610,16 +1621,20 @@ def save_pph21_settings(values):
 
 
 @frappe.whitelist()
-def preview_pph21(ptkp_status, monthly_gross):
-	"""One ordinary month's withholding for a gross and PTKP status, from the
-	loaded tables -- the same calculator a salary slip uses, so reading the
-	answer against the regulation's own examples is how the tables get checked."""
+def preview_pph21(ptkp_status, monthly_gross, rate_set=None):
+	"""One ordinary month's withholding for a gross and PTKP status -- from the set
+	in force, or from `rate_set` (a draft being checked). The same calculator a
+	salary slip uses, so reading the answer against the regulation's own examples
+	is how a set gets checked."""
 	_check("EIL PPh 21 Settings")
-	from erpbio_indonesia_localization.pph21 import calculator
+	from erpbio_indonesia_localization.pph21 import calculator, rate_sets
 	from erpbio_indonesia_localization.pph21 import tables as pph21_tables
 
+	target = frappe.db.get_value(RATE_SET, rate_set, ["name", "status"], as_dict=True) if rate_set else rate_sets.in_force()
+	if not target:
+		frappe.throw(_("No PPh 21 rate set to calculate with."))
 	gross = flt(monthly_gross)
-	with pph21_tables.preview_unverified():
+	with pph21_tables.preview_unverified(rate_set=target.name):
 		category = pph21_tables.ter_category(ptkp_status)
 		rate = flt(pph21_tables.ter_rate(category, gross))
 		withholding = flt(calculator.monthly_withholding(ptkp_status, gross))
@@ -1627,30 +1642,145 @@ def preview_pph21(ptkp_status, monthly_gross):
 		"category": category,
 		"rate": rate,
 		"withholding": withholding,
-		"verified": cint(frappe.db.get_single_value("EIL PPh 21 Settings", "tables_verified")),
+		"rate_set": target.name,
+		"verified": 1 if target.status == "Verified" else 0,
+	}
+
+
+# ------------------------------------------------------------------ PPh 21 rate sets
+# Thin wrappers: every rule (frozen verified sets, verify needs clean checks +
+# the regulation PDF + four-eyes when on, no unlock once payroll used a set)
+# lives in pph21/rate_sets.py and the doctypes' controllers.
+RATE_SET_ORDER_FIELDS = {"effective_from", "regulation", "status", "verified_on", "creation"}
+
+
+@frappe.whitelist()
+def list_rate_sets(txt=None, filters=None, order_by=None, start=0, page_length=20):
+	_check(RATE_SET)
+	from erpbio_indonesia_localization.pph21 import rate_sets
+
+	flt_list = to_getlist_filters(filters, {"status", "regulation", "effective_from"})
+	or_filters = {"regulation": ["like", f"%{txt}%"], "name": ["like", f"%{txt}%"]} if txt else None
+	rows = frappe.get_list(
+		RATE_SET,
+		filters=flt_list,
+		or_filters=or_filters,
+		fields=["name", "effective_from", "regulation", "status", "verified_by", "verified_on", "source_file"],
+		order_by=resolve_order_by(order_by, RATE_SET_ORDER_FIELDS, "effective_from desc"),
+		start=int(start),
+		page_length=int(page_length) + 1,
+	)
+	current = rate_sets.in_force()
+	for r in rows:
+		r["in_force"] = bool(current and r.name == current.name)
+		r["verified_by_name"] = frappe.utils.get_fullname(r.verified_by) if r.verified_by else None
+	return _page(rows, page_length, capped_total(RATE_SET, filters=flt_list, or_filters=or_filters))
+
+
+@frappe.whitelist()
+def get_rate_set(name):
+	_check(RATE_SET, name=name)
+	from erpbio_indonesia_localization.pph21 import rate_sets
+	from erpbio_indonesia_localization.pph21 import tables as pph21_tables
+
+	doc = frappe.get_doc(RATE_SET, name)
+	rows = rate_sets.rows_of(name)
+	current = rate_sets.in_force()
+	return {
+		"doc": {
+			"name": doc.name,
+			"effective_from": str(doc.effective_from),
+			"regulation": doc.regulation,
+			"status": doc.status,
+			"notes": doc.notes,
+			"source_file": doc.source_file,
+			"verified_by": frappe.utils.get_fullname(doc.verified_by) if doc.verified_by else None,
+			"verified_on": str(doc.verified_on) if doc.verified_on else None,
+			"last_edited_by": frappe.utils.get_fullname(doc.last_edited_by) if doc.last_edited_by else None,
+			"last_edited_by_me": doc.last_edited_by == frappe.session.user,
+			"unlock_reason": doc.unlock_reason,
+		},
+		"rows": rows,
+		"problems": pph21_tables.validate_tables(rate_set=name),
+		"in_force": bool(current and current.name == name),
+		"usage": rate_sets.usage(name),
+		"four_eyes": cint(frappe.db.get_single_value("EIL PPh 21 Settings", "require_four_eyes")),
+		"can_write": frappe.has_permission(RATE_SET, "write", doc=name),
 	}
 
 
 @frappe.whitelist(methods=["POST"])
-def set_pph21_tables_verified(verified):
-	"""Record that a human has checked the loaded tables against the regulation.
+def create_rate_set(effective_from, regulation, copy_from=None, notes=None):
+	from erpbio_indonesia_localization.pph21 import rate_sets
 
-	Deliberately a separate endpoint from the rest of the settings: this is an
-	assertion about the real world, not a preference, and refusing it while the
-	structural checks still fail would be pointless to allow.
-	"""
-	_check("EIL PPh 21 Settings", "write")
-	verified = cint(verified)
-	# Saved through the document, not db.set_single_value: its validate refuses
-	# tables that fail their own checks (on every path, not just this one), and
-	# track_changes records who attested and when.
-	s = frappe.get_single("EIL PPh 21 Settings")
-	s.tables_verified = verified
-	# Explicit: the Version row IS the audit trail (Frappe skips it under tests
-	# by default, which would hide a regression here).
-	s.save(ignore_version=False)
-	frappe.clear_cache(doctype="EIL PPh 21 Settings")
-	return {"tables_verified": verified, "verified_change": _pph21_last_change("tables_verified")}
+	return {"name": rate_sets.create(effective_from, regulation, copy_from=copy_from, notes=notes).name}
+
+
+@frappe.whitelist(methods=["POST"])
+def save_rate_set(name, values=None, rows=None):
+	"""Regulation / notes, and -- on a Draft -- the rows wholesale (the editor's grids)."""
+	_check(RATE_SET, "write", name)
+	from erpbio_indonesia_localization.pph21 import rate_sets
+
+	values = frappe.parse_json(values) or {}
+	doc = frappe.get_doc(RATE_SET, name)
+	changed = False
+	for field in ("regulation", "notes"):
+		if field in values and (doc.get(field) or "") != (values[field] or ""):
+			doc.set(field, values[field])
+			changed = True
+	if changed:
+		doc.save(ignore_version=False)
+	if rows is not None:
+		rate_sets.replace_rows(name, frappe.parse_json(rows) or {})
+	return get_rate_set(name)
+
+
+@frappe.whitelist(methods=["POST"])
+def check_rate_rows(rows):
+	"""The structural checks on an editor's unsaved rows."""
+	_check(RATE_SET)
+	from erpbio_indonesia_localization.pph21 import tables as pph21_tables
+
+	return {"problems": pph21_tables.validate_rows(frappe.parse_json(rows) or {})}
+
+
+@frappe.whitelist(methods=["POST"])
+def verify_rate_set(name):
+	from erpbio_indonesia_localization.pph21 import rate_sets
+
+	rate_sets.verify(name)
+	return get_rate_set(name)
+
+
+@frappe.whitelist(methods=["POST"])
+def unlock_rate_set(name, reason):
+	from erpbio_indonesia_localization.pph21 import rate_sets
+
+	rate_sets.unlock(name, reason)
+	return get_rate_set(name)
+
+
+@frappe.whitelist(methods=["POST"])
+def delete_rate_set(name):
+	_check(RATE_SET, "delete", name)
+	frappe.delete_doc(RATE_SET, name)
+	return {"deleted": name}
+
+
+@frappe.whitelist(methods=["POST"])
+def set_rate_set_source(name, file_url=None):
+	"""Name the attached regulation PDF (upload_file records the attachment but
+	never stamps the field on a first upload)."""
+	_check(RATE_SET, "write", name)
+	if file_url and not frappe.db.exists(
+		"File", {"file_url": file_url, "attached_to_doctype": RATE_SET, "attached_to_name": name}
+	):
+		frappe.throw(_("That file is not attached to {0}.").format(name))
+	doc = frappe.get_doc(RATE_SET, name)
+	doc.source_file = file_url or None
+	doc.save(ignore_version=False)
+	return get_rate_set(name)
 
 
 # ------------------------------------------------------- PPh 21 employee setup

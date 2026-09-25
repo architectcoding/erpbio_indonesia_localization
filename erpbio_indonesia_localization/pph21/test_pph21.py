@@ -58,8 +58,7 @@ class TestPPh21Tables(FrappeTestCase):
 		self.assertEqual(tables.pasal17_tax(300_000_000), 44_000_000)
 
 	def test_unverified_tables_refuse_to_compute(self):
-		frappe.db.set_single_value("EIL PPh 21 Settings", "tables_verified", 0)
-		frappe.clear_cache(doctype="EIL PPh 21 Settings")
+		_set_in_force_status("Draft")
 		with self.assertRaises(frappe.ValidationError):
 			tables.ter_rate("A", 8_000_000)
 
@@ -187,10 +186,17 @@ class TestPPh21Calculator(FrappeTestCase):
 
 
 def _verify_tables():
-	"""The gate is a deliberate obstacle; tests tick it explicitly so it is
-	obvious that computing at all depends on it."""
-	frappe.db.set_single_value("EIL PPh 21 Settings", "tables_verified", 1)
-	frappe.clear_cache(doctype="EIL PPh 21 Settings")
+	"""The gate is a deliberate obstacle; tests mark the rate set in force verified
+	explicitly so it is obvious that computing at all depends on it."""
+	_set_in_force_status("Verified")
+
+
+def _set_in_force_status(status):
+	from erpbio_indonesia_localization.pph21 import rate_sets
+
+	frappe.local._eil_pph21_tables = {}
+	current = rate_sets.in_force()
+	frappe.db.set_value(rate_sets.DOCTYPE, current.name, "status", status, update_modified=False)
 	frappe.local._eil_pph21_tables = {}
 
 
@@ -198,9 +204,7 @@ class TestPph21NonPermanent(FrappeTestCase):
 	"""PMK 168/2023's own worked examples for pegawai tidak tetap (pp. 39-40)."""
 
 	def setUp(self):
-		frappe.db.set_single_value("EIL PPh 21 Settings", "tables_verified", 1)
-		frappe.clear_cache(doctype="EIL PPh 21 Settings")
-		frappe.local._eil_pph21_tables = {}
+		_verify_tables()
 
 	def tearDown(self):
 		frappe.db.rollback()

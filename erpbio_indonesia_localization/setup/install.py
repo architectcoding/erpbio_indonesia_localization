@@ -574,10 +574,15 @@ def seed_pph21_rates():
 	idempotent, so it self-heals if the tables are missing, and it cannot end up
 	recorded as "already executed" while having done nothing.
 	"""
-	if not frappe.db.exists("DocType", "EIL TER Bracket"):
+	if not frappe.db.exists("DocType", "EIL TER Bracket") or not frappe.db.exists("DocType", "EIL PPh 21 Rate Set"):
 		return  # first install: model sync has not created the doctypes yet
+	from erpbio_indonesia_localization.pph21.rate_sets import adopt_unlinked_rows
 	from erpbio_indonesia_localization.pph21.rates_loader import load_rates
 
+	# Rows loaded before rate sets existed join a set first -- Verified if the
+	# site had ticked the old site-wide flag -- so the loader below finds the
+	# shipped fixture's set already there and verified, and leaves it alone.
+	adopt_unlinked_rows()
 	load_rates()
 
 
