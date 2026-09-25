@@ -1201,7 +1201,7 @@ CUSTOMER_TAX_FIELDS = (
 )
 CUSTOMER_LIST_FIELDS = ("name", "customer_name", "customer_group", "customer_type", "disabled") + CUSTOMER_TAX_FIELDS
 CUSTOMER_FILTER_FIELDS = {"name", "customer_name", "customer_group", "eil_id_type", "eil_is_pemungut", "disabled"}
-CUSTOMER_ORDER_FIELDS = {"name", "customer_name", "customer_group", "eil_id_type", "tax_id", "creation", "modified"}
+CUSTOMER_ORDER_FIELDS = {"name", "customer_name", "customer_group", "eil_id_type", "tax_id", "eil_nitku", "creation", "modified"}
 
 
 def _present(doctype, fields):
@@ -1412,7 +1412,7 @@ def save_customer_tax(payload):
 SUPPLIER_TAX_FIELDS = ("tax_id", "eil_tax_name", "eil_tax_address")
 SUPPLIER_LIST_FIELDS = ("name", "supplier_name", "supplier_group", "supplier_type", "country", "disabled") + SUPPLIER_TAX_FIELDS
 SUPPLIER_FILTER_FIELDS = {"name", "supplier_name", "supplier_group", "supplier_type", "country", "disabled"}
-SUPPLIER_ORDER_FIELDS = {"name", "supplier_name", "supplier_group", "country", "tax_id", "creation", "modified"}
+SUPPLIER_ORDER_FIELDS = {"name", "supplier_name", "supplier_group", "country", "tax_id", "eil_tax_name", "creation", "modified"}
 
 
 def _is_foreign(row):
@@ -1840,7 +1840,8 @@ EMPLOYEE_PPH21_FIELDS = (
 EMPLOYEE_TAX_FIELDS = ("eil_ptkp_status", "eil_pph21_scheme", "eil_npwp", "eil_nik")
 EMPLOYEE_FILTER_FIELDS = {"name", "employee_name", "company", "department", "status",
                           "eil_ptkp_status", "eil_pph21_scheme"}
-EMPLOYEE_ORDER_FIELDS = {"name", "employee_name", "company", "department", "status", "modified"}
+EMPLOYEE_ORDER_FIELDS = {"name", "employee_name", "company", "department", "status",
+                         "eil_ptkp_status", "eil_pph21_scheme", "eil_npwp", "modified"}
 
 
 def _live_ter_category(status):
