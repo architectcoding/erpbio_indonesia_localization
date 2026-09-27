@@ -292,8 +292,10 @@ def spt_masa(company, from_date, to_date):
 		frappe.get_all("Sales Invoice", filters={"name": ["in", names], "eil_is_pemungut": 1}, pluck="name")
 	) if names else set()
 
+	# str(): `_()` hands a lazy label back unchanged, and the JSON response
+	# cannot serialize one -- the page got a 500 instead of the SPT
 	lines = {
-		key: {"key": key, "label": _(label), "codes": list(codes), "payable": payable, "count": 0, "dpp": 0.0, "ppn": 0.0}
+		key: {"key": key, "label": str(label), "codes": list(codes), "payable": payable, "count": 0, "dpp": 0.0, "ppn": 0.0}
 		for key, label, codes, payable in SPT_LINES
 	}
 	# a code outside the table is still PPN on a faktur: counted as payable and
