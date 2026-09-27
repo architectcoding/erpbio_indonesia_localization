@@ -98,6 +98,18 @@ class TestGovernmentSale(_ExportCase):
 		self.assertFalse(self._line(after, "pemungut")["payable"])
 		self.assertAlmostEqual(after["net"] - before["net"], 1_100_000, places=0)
 
+	def test_the_spt_goes_out_as_json(self):
+		"""The page reads the SPT over HTTP; a lazy `_lt` label made the JSON
+		response fail with a 500 while a direct call still worked."""
+		from frappe.utils import orjson_dumps
+		from frappe.utils.response import json_handler
+
+		self._sale(self.buyer, net=10_000_000)
+		spt = frappe.parse_json(orjson_dumps(self._spt(), default=json_handler))
+		labels = {line["key"]: line["label"] for line in spt["keluaran_lines"]}
+		self.assertEqual(labels["self"], frappe._("PPN dipungut sendiri"))
+		self.assertTrue(all(isinstance(label, str) and label for label in labels.values()))
+
 	def test_an_old_pemungut_invoice_with_no_code_is_still_not_payable(self):
 		self._wapu()
 		before = self._spt()
