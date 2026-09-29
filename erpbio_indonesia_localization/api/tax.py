@@ -316,7 +316,17 @@ def spt_masa(company, from_date, to_date):
 		"masukan": total_masukan,
 		"masukan_count": len(masukan),
 		"net": flt(payable - total_masukan, 2),
+		# The month's invoices still to export. From the rows already loaded, so
+		# the ERPbio Home tax card needs no second pass over every invoice.
+		"not_exported": not_exported_count(keluaran),
 	}
+
+
+def not_exported_count(keluaran_rows):
+	"""Sales Invoices on a PPN Keluaran register that carry no faktur number yet."""
+	return sum(
+		1 for r in keluaran_rows if r.get("voucher_type") == "Sales Invoice" and not r.get("faktur_number")
+	)
 
 
 # -------------------------------------------------------------- bukti potong
