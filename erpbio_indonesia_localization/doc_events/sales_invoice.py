@@ -161,9 +161,8 @@ def _strip_output_vat(doc):
 
 	On a WAPU sale the buyer deposits the PPN itself, so charging it in `taxes`
 	as well as carrying it in `eil_govt_charges` counts it twice: the invoice
-	ends up with an output-VAT liability we do not owe, and the receipt can no
-	longer be balanced (the payment hook expects net + PPN, but the bendahara
-	only ever pays net). A sales rep picking their usual "PPN 11%" template on
+	ends up with an output-VAT liability we do not owe, and the receivable
+	holds a PPN the bendahara never sends us. A sales rep picking their usual "PPN 11%" template on
 	the order is the normal way this arrives, so fix it here rather than asking
 	them to know. Anything that is not output VAT is left exactly as it was."""
 	rows = doc.get("taxes") or []

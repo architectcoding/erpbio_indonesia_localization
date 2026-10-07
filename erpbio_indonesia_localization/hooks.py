@@ -45,8 +45,9 @@ doc_events = {
 		"on_trash": "erpbio_indonesia_localization.api.tax_document_files.on_file_trash",
 	},
 	"Payment Entry": {
-		# WAPU/Bendahara: auto-clear Piutang PPN Bendahara on receipts against
-		# pemungut invoices (negative deduction). See doc_events/payment_entry.py.
+		# WAPU/Bendahara: a receipt marked "PPN received" clears Piutang PPN
+		# Bendahara (negative deduction); a net one leaves it for the bukti setor.
+		# See doc_events/payment_entry.py.
 		"before_validate": "erpbio_indonesia_localization.doc_events.payment_entry.before_validate",
 		"on_submit": "erpbio_indonesia_localization.doc_events.payment_entry.on_submit",
 		"on_cancel": "erpbio_indonesia_localization.doc_events.payment_entry.on_cancel",
