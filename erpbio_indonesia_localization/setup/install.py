@@ -405,6 +405,20 @@ CUSTOM_FIELDS = {
 			"description": "Registered address for the Faktur Pajak on THIS document. Blank = the Customer's Tax Address, else the billing address.",
 		},
 	],
+	# A receipt against a government (pemungut/WAPU) invoice says whether the
+	# treasurer's transfer carried the PPN. It cannot be inferred from the amount:
+	# a net transfer and ERPNext's untouched default are the same figure. See
+	# doc_events/payment_entry.py.
+	"Payment Entry": [
+		{
+			"fieldname": "eil_ppn_received",
+			"label": "PPN Received With This Payment (WAPU)",
+			"fieldtype": "Check",
+			"insert_after": "references",
+			"depends_on": "eval:doc.payment_type=='Receive' && doc.party_type=='Customer'",
+			"description": "Tick only when the government treasurer sent the net PLUS the invoice's PPN. Usually the treasurer deposits the PPN to the state and sends only the net: leave this unticked and Piutang PPN Bendaharawan stays open for the bukti setor. Ticked, the PPN is cleared on this receipt and an untouched amount is raised to include it.",
+		},
+	],
 	# Government (pemungut/WAPU) sales. The flag travels with the document so a
 	# sales user only ever answers "is this a government customer?"; the charges
 	# themselves are derived on the invoice from Indonesia Tax Settings.

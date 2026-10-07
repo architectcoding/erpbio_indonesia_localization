@@ -14,7 +14,7 @@
 # block a real payment from being submitted or cancelled.
 
 import frappe
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 
 def on_submit(doc, method=None):
@@ -99,33 +99,49 @@ def _withholding_map(direction):
 	}
 
 
-# --- WAPU/Bendahara: clear Piutang PPN Bendahara on the receipt --------------
-# The bendahara's cash covers the trade receivable AND the PPN receivable: the
-# invoice's outstanding is already net of both government portions, so the money
-# that arrives is `outstanding + PPN`. We add a NEGATIVE deduction to the
-# invoice's "PPN Dipungut Pemungut" account to route that excess to Piutang PPN
-# Bendahara, and set the amount to match — ERPNext prefills the allocation,
-# which is short by exactly the PPN every time. PPh 22 is NOT touched here; it
-# is booked at invoice time as a prepaid asset the company later claims.
+# --- WAPU/Bendahara: Piutang PPN Bendahara on the receipt -------------------
+# The invoice's reclassification carves its PPN out of the receivable into
+# Piutang PPN Bendahara, so the outstanding is already net of it. What the
+# treasurer then sends varies, and only the bank statement says which:
 #
-# Both only apply when a reference settles its invoice in FULL. A part payment
-# would otherwise clear the whole PPN receivable against a fraction of the cash,
-# so it is left alone and behaves like an ordinary part payment.
+#  - net, the usual WAPU case: the treasurer deposits the PPN to the state
+#    itself and sends the outstanding. The receipt is the outstanding, and
+#    Piutang PPN Bendahara stays open for the bukti setor to account for.
+#  - gross: the treasurer sends the outstanding PLUS the PPN. The receipt clears
+#    the PPN receivable with a NEGATIVE deduction on its account, and the bank
+#    gets both.
+#
+# The receipt states which in `eil_ppn_received`. This used to be inferred: an
+# amount still equal to the allocation was raised to allocation + PPN, on the
+# theory that it was ERPNext's untouched default. But a net receipt typed from
+# the statement equals the allocation too, so every net receipt was booked
+# gross -- the bank overstated by the PPN, and the PPN receivable cleared with
+# no bukti setor behind it. Now the box is ticked by the accountant, or by a
+# fact that can only mean gross: a negative row on the PPN account put there on
+# purpose (erpbio_general's cash/bank form sends one), or an amount of exactly
+# allocation + PPN. Unticking it takes the clearing back out.
+#
+# Only a reference that settles its invoice in FULL is cleared. A part payment
+# would otherwise clear the whole PPN receivable against a fraction of the
+# cash, so the accountant splits that one by hand. PPh 22 is never touched here;
+# it is booked at invoice time as a prepaid asset the company later claims.
+
+PPN_RECEIVED = "eil_ppn_received"
+
 
 def before_validate(doc, method=None):
 	if doc.payment_type != "Receive" or doc.party_type != "Customer":
 		return
-	to_clear = {}
-	for ref in doc.get("references") or []:
-		if ref.reference_doctype != "Sales Invoice" or not ref.reference_name:
-			continue
-		outstanding = flt(
-			frappe.db.get_value("Sales Invoice", ref.reference_name, "outstanding_amount")
-		)
-		if flt(ref.allocated_amount) + 0.005 < outstanding:
-			continue  # a part payment — the accountant splits the PPN by hand
-		for acc, amt in _pemungut_ppn(ref.reference_name).items():
-			to_clear[acc] = to_clear.get(acc, 0.0) + amt
+	to_clear, accounts = _government_ppn(doc)
+	if not accounts:
+		return
+	if _unticked(doc):
+		_withdraw_clearing(doc, accounts)
+		return
+	if not cint(doc.get(PPN_RECEIVED)) and _says_ppn_received(doc, accounts, sum(to_clear.values())):
+		doc.set(PPN_RECEIVED, 1)
+	if not cint(doc.get(PPN_RECEIVED)):
+		return  # net: the bukti setor accounts for the PPN, not this receipt
 	for acc, amt in to_clear.items():
 		have = sum(-flt(d.amount) for d in (doc.get("deductions") or [])
 				   if d.account == acc and flt(d.amount) < 0)
@@ -140,21 +156,89 @@ def before_validate(doc, method=None):
 	_prefill_amount(doc, sum(to_clear.values()))
 
 
-def _prefill_amount(doc, ppn):
-	"""Raise the untouched default to the cash the bendahara actually sends.
+def _government_ppn(doc):
+	"""({account: amount} the receipt clears, every PPN account its invoices use).
 
-	ERPNext prefills the amount from the allocation, which on a WAPU invoice is
-	short by exactly the PPN — leaving the accountant to type the real figure and
-	the entry unbalanced until they do. Corrected only while the figure is still
-	that default, so a real receipt that differs (a transfer fee, a rounding) is
-	never overwritten."""
+	The first holds only the invoices this receipt settles in full. The second
+	takes part payments too: a clearing row the accountant split onto one is
+	still a statement that the PPN came with the cash."""
+	to_clear, accounts = {}, set()
+	for ref in doc.get("references") or []:
+		if ref.reference_doctype != "Sales Invoice" or not ref.reference_name:
+			continue
+		ppn = _pemungut_ppn(ref.reference_name)
+		if not ppn:
+			continue
+		accounts.update(ppn)
+		outstanding = flt(
+			frappe.db.get_value("Sales Invoice", ref.reference_name, "outstanding_amount")
+		)
+		if flt(ref.allocated_amount) + 0.005 < outstanding:
+			continue  # a part payment — the accountant splits the PPN by hand
+		for acc, amt in ppn.items():
+			to_clear[acc] = to_clear.get(acc, 0.0) + amt
+	return to_clear, accounts
+
+
+def _says_ppn_received(doc, accounts, ppn):
+	"""Whether the receipt itself already says the PPN came with the cash.
+
+	Only facts that cannot mean net count. A receipt whose amount equals the
+	allocation does NOT: that is both ERPNext's default and a net transfer typed
+	from the statement, and reading it as gross is the bug this replaced."""
+	if any(d.account in accounts and flt(d.amount) < 0 for d in doc.get("deductions") or []):
+		return True
+	if not ppn or doc.docstatus != 0:
+		return False
+	return abs(flt(doc.paid_amount) - (_allocated(doc) + ppn)) < 0.005
+
+
+def _unticked(doc):
+	"""The accountant just took the tick off a saved draft."""
+	if doc.docstatus != 0 or cint(doc.get(PPN_RECEIVED)):
+		return False
+	before = doc.get_doc_before_save()
+	return bool(before and cint(before.get(PPN_RECEIVED)))
+
+
+def _withdraw_clearing(doc, accounts):
+	"""Undo what the tick did: the PPN clearing rows go, and an amount that is
+	exactly allocation + their PPN comes back down to the allocation. Left in
+	place, either one would read as gross again on the next save."""
+	rows = [d for d in doc.get("deductions") or [] if d.account in accounts and flt(d.amount) < 0]
+	if not rows:
+		return
+	ppn = -sum(flt(d.amount) for d in rows)
+	for d in rows:
+		doc.remove(d)
+	allocated = _allocated(doc)
+	if abs(flt(doc.paid_amount) - (allocated + ppn)) < 0.005:
+		_set_amount(doc, allocated)
+
+
+def _prefill_amount(doc, ppn):
+	"""Raise the untouched default to the cash a gross treasurer sends.
+
+	Only reached on a receipt marked gross. ERPNext prefills the amount from the
+	allocation, which is then short by exactly the PPN — leaving the entry
+	unbalanced until the accountant types the real figure. Corrected only while
+	the figure is still that default, so a real receipt that differs (a transfer
+	fee, a rounding) is never overwritten."""
 	if not ppn or doc.docstatus != 0:
 		return
-	allocated = sum(flt(r.allocated_amount) for r in doc.get("references") or [])
+	allocated = _allocated(doc)
 	if abs(flt(doc.paid_amount) - allocated) >= 0.005:
 		return
+	_set_amount(doc, allocated + ppn)
+
+
+def _allocated(doc):
+	return sum(flt(r.allocated_amount) for r in doc.get("references") or [])
+
+
+def _set_amount(doc, amount):
 	same_currency = abs(flt(doc.received_amount) - flt(doc.paid_amount)) < 0.005
-	doc.paid_amount = flt(allocated + ppn, doc.precision("paid_amount"))
+	doc.paid_amount = flt(amount, doc.precision("paid_amount"))
 	if same_currency:
 		doc.received_amount = flt(doc.paid_amount, doc.precision("received_amount"))
 

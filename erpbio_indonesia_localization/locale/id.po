@@ -724,6 +724,12 @@ msgstr "Pemerintah (Pemungut / WAPU)"
 msgid "This buyer deposits the PPN itself and withholds PPh 22"
 msgstr "Pembeli ini menyetor PPN sendiri dan memotong PPh 22"
 
+msgid "PPN Received With This Payment (WAPU)"
+msgstr "PPN Ikut Diterima di Pembayaran Ini (WAPU)"
+
+msgid "Tick only when the government treasurer sent the net PLUS the invoice's PPN. Usually the treasurer deposits the PPN to the state and sends only the net: leave this unticked and Piutang PPN Bendaharawan stays open for the bukti setor. Ticked, the PPN is cleared on this receipt and an untouched amount is raised to include it."
+msgstr "Centang hanya bila bendahara mengirim neto DITAMBAH PPN faktur. Biasanya bendahara menyetor PPN ke kas negara dan hanya mengirim neto: biarkan tidak dicentang, maka Piutang PPN Bendaharawan tetap terbuka untuk bukti setor. Bila dicentang, PPN dilunasi di penerimaan ini dan jumlah yang belum diubah dinaikkan agar mencakupnya."
+
 msgid "Sets the flag on new orders and invoices for this customer."
 msgstr "Menandai pesanan dan faktur baru untuk pelanggan ini."
 
