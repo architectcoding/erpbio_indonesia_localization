@@ -346,6 +346,7 @@ def list_bukti_potong(direction=None, start=0, page_length=50):
 			"tax_object_code",
 			"sales_invoice",
 			"payment_entry",
+			"journal_entry",
 			"withholding_date",
 			"gross_amount",
 			"rate",
@@ -365,7 +366,7 @@ def list_bukti_potong(direction=None, start=0, page_length=50):
 # (the page's Received / Issued switch), not a user filter.
 BP_FILTER_FIELDS = {
 	"name", "company", "customer", "supplier", "tax_type", "tax_object_code", "status",
-	"withholding_date", "bp_number", "bp_date", "sales_invoice", "payment_entry",
+	"withholding_date", "bp_number", "bp_date", "sales_invoice", "payment_entry", "journal_entry",
 }
 BP_ORDER_FIELDS = {
 	"name", "customer", "supplier", "tax_type", "tax_object_code", "withholding_date",
@@ -373,7 +374,7 @@ BP_ORDER_FIELDS = {
 }
 BP_LIST_FIELDS = [
 	"name", "direction", "customer", "supplier", "tax_type", "tax_object_code", "sales_invoice",
-	"payment_entry", "withholding_date", "gross_amount", "rate", "tax_amount", "bp_number",
+	"payment_entry", "journal_entry", "withholding_date", "gross_amount", "rate", "tax_amount", "bp_number",
 	"bp_date", "bp_file", "status",
 ]
 
@@ -479,6 +480,7 @@ BP_FIELDS = (
 	"tax_object_code",
 	"sales_invoice",
 	"payment_entry",
+	"journal_entry",
 	"withholding_date",
 	"status",
 	"gross_amount",

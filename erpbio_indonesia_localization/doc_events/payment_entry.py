@@ -25,12 +25,16 @@ def on_submit(doc, method=None):
 
 
 def on_cancel(doc, method=None):
+	forget_bukti_potong("payment_entry", doc.name)
+
+
+def forget_bukti_potong(source_field, source):
 	"""Remove auto-created certificates that never materialized. A numbered one
 	(Received/Reported) stays — the paper exists regardless of the payment."""
 	try:
 		for name in frappe.get_all(
 			"Bukti Potong",
-			filters={"payment_entry": doc.name, "auto_created": 1, "status": ["in", ["Expected", "To Report"]]},
+			filters={source_field: source, "auto_created": 1, "status": ["in", ["Expected", "To Report"]]},
 			pluck="name",
 		):
 			frappe.delete_doc("Bukti Potong", name, force=1, ignore_permissions=True)
@@ -41,49 +45,87 @@ def on_cancel(doc, method=None):
 def _create_bukti_potong(doc):
 	if doc.party_type not in ("Customer", "Supplier") or not doc.get("deductions"):
 		return
-	wanted_direction = "Received" if doc.party_type == "Customer" else "Issued"
-	mapping = _withholding_map(wanted_direction)
-	if not mapping:
-		return
-
-	invoice_doctype = "Sales Invoice" if wanted_direction == "Received" else "Purchase Invoice"
+	invoice_doctype = "Sales Invoice" if doc.party_type == "Customer" else "Purchase Invoice"
 	invoice_refs = [
 		r.reference_name for r in (doc.get("references") or []) if r.reference_doctype == invoice_doctype
 	]
-	linked_invoice = invoice_refs[0] if len(invoice_refs) == 1 else None
+	raise_bukti_potong(
+		"payment_entry",
+		doc,
+		doc.party_type,
+		doc.party,
+		[(row.account, row.amount) for row in doc.deductions],
+		invoice_refs[0] if len(invoice_refs) == 1 else None,
+	)
 
-	for row in doc.deductions:
-		rule = mapping.get(row.account)
+
+def raise_bukti_potong(source_field, doc, party_type, party, deductions, linked_invoice=None):
+	"""One certificate per mapped withholding among `deductions` [(account,
+	amount)], linked to `doc` through `source_field` (payment_entry, or
+	journal_entry for a receipt identified after it was parked)."""
+	wanted_direction = "Received" if party_type == "Customer" else "Issued"
+	mapping = _withholding_map(wanted_direction)
+	if not mapping:
+		return
+	base = _invoice_base(party_type, linked_invoice)
+	for account, amount in deductions:
+		rule = mapping.get(account)
 		if not rule:
 			continue
-		tax_amount = abs(flt(row.amount))
+		tax_amount = abs(flt(amount))
 		if not tax_amount:
 			continue
 		if frappe.db.exists(
 			"Bukti Potong",
-			{"payment_entry": doc.name, "tax_type": rule["tax_type"], "tax_amount": tax_amount},
+			{source_field: doc.name, "tax_type": rule["tax_type"], "tax_amount": tax_amount},
 		):
-			continue  # PE amended and resubmitted — don't double up
-		rate = flt(rule.get("rate"))
+			continue  # amended and resubmitted — don't double up
+		rate, gross = _rate_and_gross(tax_amount, base, flt(rule.get("rate")))
 		bp = frappe.new_doc("Bukti Potong")
 		bp.company = doc.company
 		bp.direction = wanted_direction
 		if wanted_direction == "Received":
-			bp.customer = doc.party
+			bp.customer = party
 			bp.sales_invoice = linked_invoice
 		else:
-			bp.supplier = doc.party
+			bp.supplier = party
 		bp.tax_type = rule["tax_type"]
 		bp.tax_object_code = rule.get("tax_object_code")
-		bp.payment_entry = doc.name
+		bp.set(source_field, doc.name)
 		bp.withholding_date = doc.posting_date
 		bp.rate = rate
 		bp.tax_amount = tax_amount
-		bp.gross_amount = flt(tax_amount * 100.0 / rate, 2) if rate else 0
+		bp.gross_amount = gross
 		bp.auto_created = 1
-		bp.notes = frappe._("Auto-created from Payment Entry {0} deduction ({1}).").format(doc.name, row.account)
+		bp.notes = frappe._("Auto-created from {0} {1} deduction ({2}).").format(
+			frappe._(doc.doctype), doc.name, account
+		)
 		bp.flags.ignore_permissions = True
 		bp.insert()
+
+
+def _invoice_base(party_type, invoice):
+	"""The DPP a withholding against `invoice` is computed on, or 0."""
+	if not invoice:
+		return 0.0
+	doctype = "Sales Invoice" if party_type == "Customer" else "Purchase Invoice"
+	return flt(frappe.db.get_value(doctype, invoice, "net_total"))
+
+
+def _rate_and_gross(tax_amount, base, mapped_rate):
+	"""The rate the buyer actually applied, not the one the account is mapped
+	at: a buyer may withhold at a rate of its own choosing (0,5% or 2% on the
+	same sale), and a certificate stating the mapped rate would carry a base
+	several times off. When the amount is, to the rupiah, a round rate (a
+	multiple of 0,05%: 0,5 / 1,5 / 1,75 / 2 / 2,65 …) of the linked invoice's
+	DPP, that is the rate; otherwise — a part payment, no single invoice — the
+	mapped one, which the accountant corrects from the paper."""
+	if base > 0:
+		actual = tax_amount * 100.0 / base
+		step = round(actual * 20) / 20
+		if 0 < step <= 15 and abs(flt(base * step / 100.0, 2) - tax_amount) < 1:
+			return step, flt(base, 2)
+	return mapped_rate, flt(tax_amount * 100.0 / mapped_rate, 2) if mapped_rate else 0
 
 
 def _withholding_map(direction):

@@ -430,6 +430,9 @@ msgstr "Tambah Akun"
 msgid "Auto-created from Payment Entry {0} deduction ({1})."
 msgstr "Dibuat otomatis dari potongan Entri Pembayaran {0} ({1})."
 
+msgid "Auto-created from {0} {1} deduction ({2})."
+msgstr "Dibuat otomatis dari potongan {0} {1} ({2})."
+
 msgid "Export e-Bupot"
 msgstr "Ekspor e-Bupot"
 

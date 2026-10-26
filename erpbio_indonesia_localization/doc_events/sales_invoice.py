@@ -542,7 +542,10 @@ def _expect_bukti_potong(doc):
 		)
 		if frappe.db.exists(
 			"Bukti Potong",
-			{"sales_invoice": doc.name, "payment_entry": ["is", "not set"], "tax_type": tax_type, "auto_created": 1},
+			{
+				"sales_invoice": doc.name, "payment_entry": ["is", "not set"], "journal_entry": ["is", "not set"],
+				"tax_type": tax_type, "auto_created": 1,
+			},
 		):
 			continue  # amended and resubmitted -- don't double up
 		rate = flt(row.rate) or flt(rule.get("rate"))
@@ -574,7 +577,8 @@ def _forget_bukti_potong(doc):
 		for name in frappe.get_all(
 			"Bukti Potong",
 			filters={
-				"sales_invoice": doc.name, "payment_entry": ["is", "not set"], "auto_created": 1,
+				"sales_invoice": doc.name, "payment_entry": ["is", "not set"], "journal_entry": ["is", "not set"],
+				"auto_created": 1,
 				"status": ["in", ["Expected", "To Report"]],
 			},
 			pluck="name",

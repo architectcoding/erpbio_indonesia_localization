@@ -14,6 +14,7 @@
   "col_0",
   "sales_invoice",
   "payment_entry",
+  "journal_entry",
   "withholding_date",
   "status",
   "section_amounts",
@@ -91,6 +92,13 @@
    "fieldtype": "Link",
    "label": "Payment Entry",
    "options": "Payment Entry"
+  },
+  {
+   "description": "The memorial journal that settled the invoice, when the money was parked as unidentified first.",
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "label": "Journal Entry",
+   "options": "Journal Entry"
   },
   {
    "fieldname": "withholding_date",
@@ -183,7 +191,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-25 13:45:00.000000",
+ "modified": "2026-10-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "ERPbio Indonesia Localization",
  "name": "Bukti Potong",
