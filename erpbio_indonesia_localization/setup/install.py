@@ -404,6 +404,20 @@ CUSTOM_FIELDS = {
 			"insert_after": "eil_tax_name",
 			"description": "Registered address for the Faktur Pajak on THIS document. Blank = the Customer's Tax Address, else the billing address.",
 		},
+		# The faktur made out to another party than the invoice's customer: the
+		# hospital whose NPWP a doctor's purchase is reported under, the person
+		# whose NIK goes on it. The customer still owes the money; only the buyer
+		# identity on THIS faktur changes. erpbio_general copies the party's
+		# identity onto the fields above; _buyer_bits reads its NITKU and email.
+		{
+			"fieldname": "eil_buyer_customer",
+			"label": "Faktur To (Other Party)",
+			"fieldtype": "Link",
+			"options": "Customer",
+			"ignore_user_permissions": 1,
+			"insert_after": "eil_tax_address",
+			"description": "Blank = the customer. Set only when this document's faktur goes to someone else; the customer still owes the amount.",
+		},
 	],
 	# Government (pemungut/WAPU) sales. The flag travels with the document so a
 	# sales user only ever answers "is this a government customer?"; the charges
@@ -440,6 +454,20 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Data",
 			"insert_after": "tax_id",
 			"description": "Registered name for the Faktur Pajak on THIS document. Blank = the Customer's Tax Name, else the Customer Name.",
+		},
+		# The faktur made out to another party than the invoice's customer: the
+		# hospital whose NPWP a doctor's purchase is reported under, the person
+		# whose NIK goes on it. The customer still owes the money; only the buyer
+		# identity on THIS faktur changes. erpbio_general copies the party's
+		# identity onto the fields above; _buyer_bits reads its NITKU and email.
+		{
+			"fieldname": "eil_buyer_customer",
+			"label": "Faktur To (Other Party)",
+			"fieldtype": "Link",
+			"options": "Customer",
+			"ignore_user_permissions": 1,
+			"insert_after": "eil_tax_name",
+			"description": "Blank = the customer. Set only when this document's faktur goes to someone else; the customer still owes the amount.",
 		},
 	],
 	# The government treatment lives on the SAME master the sales team already

@@ -141,6 +141,26 @@ def _digits(value):
 	return re.sub(r"\D", "", value or "")
 
 
+def _fallback_name(si, master):
+	"""No registered tax name anywhere: the faktur party's own name, never the
+	name of the customer it is not made out to."""
+	if si.get("eil_buyer_customer"):
+		return master.get("customer_name") or si.eil_buyer_customer
+	return si.customer_name or si.customer
+
+
+def _buyer_idtku(npwp, master):
+	"""The buyer's NITKU: the master's own, unless the faktur carries another
+	number than the master's (a hospital's NPWP typed on a doctor's invoice
+	must not be paired with the doctor's NITKU). Otherwise the head-office
+	form, NPWP + 000000."""
+	nitku = _digits(master.get("eil_nitku"))
+	own = _digits(master.get("tax_id"))
+	if nitku and (not own or own == npwp):
+		return nitku
+	return npwp + "000000" if npwp else ""
+
+
 def _strip_html(value):
 	return re.sub(r"<[^>]+>", " ", value or "").replace("&amp;", "&").strip()
 
@@ -726,10 +746,12 @@ class CoretaxFakturExport(Document):
 		return self.npwp_penjual + "000000" if self.npwp_penjual else ""
 
 	def _buyer_bits(self, si):
+		# The faktur may be made out to another party than the customer who owes
+		# the invoice (eil_buyer_customer): that party's master is the fallback.
 		customer = frappe.db.get_value(
 			"Customer",
-			si.customer,
-			["tax_id", "eil_id_type", "eil_document_number", "eil_nitku", "eil_tax_email", "eil_country_code", "eil_tax_name", "eil_tax_address"],
+			si.get("eil_buyer_customer") or si.customer,
+			["tax_id", "eil_id_type", "eil_document_number", "eil_nitku", "eil_tax_email", "eil_country_code", "eil_tax_name", "eil_tax_address", "customer_name"],
 			as_dict=True,
 		) or frappe._dict()
 		settings_country = frappe.db.get_single_value("Indonesia Tax Settings", "default_buyer_country")
@@ -743,7 +765,7 @@ class CoretaxFakturExport(Document):
 			# The registered name, not the trading name the reps use: "RS Columbia Asia
 			# Semarang" is BELEFINA SARANA MEDIKA to the tax office. The document may
 			# override the customer (a faktur issued to the payer's institution).
-			"name": si.get("eil_tax_name") or customer.eil_tax_name or si.customer_name or si.customer,
+			"name": si.get("eil_tax_name") or customer.eil_tax_name or _fallback_name(si, customer),
 			# The address as registered with the tax office, not the billing block
 			# the invoice prints: a hospital under a foundation, a branch buying on
 			# the head office's NPWP, a PT at a virtual office -- the faktur's trio
@@ -754,7 +776,7 @@ class CoretaxFakturExport(Document):
 			"document_number": si.get("eil_document_number") or customer.eil_document_number or "-",
 			"country": customer.eil_country_code or settings_country or "IDN",
 			"email": customer.eil_tax_email or "",
-			"idtku": _digits(customer.eil_nitku) or (npwp + "000000" if npwp else ""),
+			"idtku": _buyer_idtku(npwp, customer),
 		}
 
 	def _barang_jasa(self, item_row):

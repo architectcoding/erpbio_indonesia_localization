@@ -58,6 +58,25 @@ class TestInvoiceBuyerIdentity(_ExportCase):
 		bits = self._bits(si)
 		self.assertEqual((bits["id_type"], bits["document_number"]), ("Passport", "B7654321"))
 
+	def test_a_faktur_party_supplies_its_own_nitku_and_name(self):
+		"""Faktur made out to another party (a doctor's order billed to the
+		hospital): that party's NITKU and name, never the customer's."""
+		si = self._invoice(
+			[(self.service, 1, 1_000_000, "Unit")], template=self.template_ppn,
+			customer=self.buyer_no_npwp, eil_buyer_customer=self.buyer_nitku, tax_id=BUYER_NPWP,
+		)
+		bits = self._bits(si)
+		self.assertEqual(bits["idtku"], "098765432109001")
+		self.assertEqual(bits["name"], self.buyer_nitku)
+
+	def test_another_npwp_typed_on_the_invoice_drops_the_customer_s_nitku(self):
+		"""The doctor's NITKU must not ride along with the hospital's NPWP."""
+		si = self._invoice(
+			[(self.service, 1, 1_000_000, "Unit")], template=self.template_ppn,
+			customer=self.buyer_nitku, tax_id="0011223344556677",
+		)
+		self.assertEqual(self._bits(si)["idtku"], "0011223344556677000000")
+
 	def test_a_tax_inclusive_price_is_refused_for_a_pemungut(self):
 		frappe.db.set_value("Customer", self.buyer_nitku, "eil_is_pemungut", 1, update_modified=False)
 		from erpnext.controllers.accounts_controller import get_taxes_and_charges
