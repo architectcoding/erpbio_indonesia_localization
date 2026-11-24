@@ -46,14 +46,10 @@ def _get_engine():
 def read(path, rotation_hint=0):
 	"""-> (lines, source, confidence). source is "pdf-text" or "ocr"; confidence 0..1 (1.0 for text)."""
 	if path.lower().endswith(PDF_EXT):
-		text = _pdf_text(path)
-		if len(re.sub(r"\s", "", text)) >= 40:  # a DJP letter as issued: real text, no OCR needed
-			return [l.strip() for l in text.splitlines() if l.strip()], "pdf-text", 1.0
-		pages = _pdf_render(path, dpi=200)
-		if not pages:
-			return [], "ocr", 0.0
-		lines, conf = _ocr_best_rotation(pages[0], rotation_hint)
-		return lines, "ocr", conf
+		lines = _born_digital_lines(path)
+		if lines:  # a DJP letter or card as issued: real text, no OCR needed
+			return lines, "pdf-text", 1.0
+		return read_pixels(path, rotation_hint)
 	from PIL import Image, ImageOps
 
 	img = ImageOps.exif_transpose(Image.open(path)).convert("RGB")  # phone photos carry their orientation in EXIF
@@ -63,12 +59,47 @@ def read(path, rotation_hint=0):
 	return lines, "ocr", conf
 
 
+def read_pixels(path, rotation_hint=0):
+	"""The first page of a PDF through OCR whatever text it carries: for a PDF whose text held no
+	tax number (a card pasted as a picture into a page with other text on it)."""
+	pages = _pdf_render(path, dpi=200)
+	if not pages:
+		return [], "ocr", 0.0
+	lines, conf = _ocr_best_rotation(pages[0], rotation_hint)
+	return lines, "ocr", conf
+
+
 def read_pdf_text_only(path):
 	"""A born-digital PDF without the engine; a scan raises EngineMissing."""
-	text = _pdf_text(path)
-	if len(re.sub(r"\s", "", text)) >= 40:
-		return [l.strip() for l in text.splitlines() if l.strip()], "pdf-text", 1.0
+	lines = _born_digital_lines(path)
+	if lines:
+		return lines, "pdf-text", 1.0
 	raise EngineMissing("This PDF is a scan; reading it needs the OCR engine (pip install rapidocr-onnxruntime)")
+
+
+def _born_digital_lines(path):
+	"""The PDF's own text, or [] when there is too little of it or it is a scanner's OCR layer.
+	That layer is written invisible (text render mode 3) over the picture; it is somebody else's
+	OCR ("CY. C0NT'ilII,OH INIX}NESIA") and must not pass for text the tax office issued."""
+	if _text_is_invisible(path):
+		return []
+	text = _pdf_text(path)
+	if len(re.sub(r"\s", "", text)) < 40:
+		return []
+	return [l.strip() for l in text.splitlines() if l.strip()]
+
+
+def _text_is_invisible(path):
+	import pypdfium2 as pdfium
+	import pypdfium2.raw as raw
+
+	doc = pdfium.PdfDocument(path)
+	try:
+		modes = [raw.FPDFTextObj_GetTextRenderMode(o.raw) for i in range(min(len(doc), 1))
+		         for o in doc[i].get_objects(filter=[raw.FPDF_PAGEOBJ_TEXT], max_depth=4)]
+	finally:
+		doc.close()
+	return bool(modes) and modes.count(raw.FPDF_TEXTRENDERMODE_INVISIBLE) * 2 > len(modes)
 
 
 def _pdf_text(path):
@@ -119,11 +150,28 @@ def _mean_conf(res):
 	return (sum(float(c) for _, _, c in res) / len(res)) if res else 0.0
 
 
+def _front_only(res):
+	"""An NPWP card is often issued and scanned with its back beside its front. The back's rows
+	share a height with the front's, so without this they end up inside the address."""
+	from erpbio_indonesia_localization.tax_ocr.parser import CARD_BACK_HEADING, OFFICE, compact
+
+	left = lambda b: min(p[0] for p in b)  # noqa: E731
+	right = lambda b: max(p[0] for p in b)  # noqa: E731
+	back = [left(b) for b, t, _c in res if CARD_BACK_HEADING.search(compact(t))]
+	front = [right(b) for b, t, _c in res if OFFICE.search(compact(t))]
+	if not back or not front:
+		return res
+	edge = max(front)  # the office line runs to the front card's right edge
+	if min(back) <= edge:
+		return res
+	return [r for r in res if left(r[0]) <= edge]
+
+
 def _rows(res):
 	"""Cluster boxes into visual rows (y-centre within half a box height), left to right, so a
 	KTP's "Nama" label box and its ": ANDI ..." value box come out as one line."""
 	items = []
-	for box, text, conf in res:
+	for box, text, conf in _front_only(res):
 		ys = [p[1] for p in box]
 		xs = [p[0] for p in box]
 		items.append((sum(ys) / 4.0, (max(ys) - min(ys)) or 1.0, min(xs), text.strip()))

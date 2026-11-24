@@ -16,7 +16,7 @@ except ImportError:  # frappe < 16
 
 from erpbio_indonesia_localization.api import tax_ocr
 from erpbio_indonesia_localization.tax_ocr import reader as tax_reader
-from erpbio_indonesia_localization.tests.test_tax_ocr_parser import KTP, NEW_CARD, OLD_CARD, SKT
+from erpbio_indonesia_localization.tests.test_tax_ocr_parser import CORETAX, CORETAX_OCR, KTP, NEW_CARD, OLD_CARD, SKT
 
 CUSTOMER = "_Test OCR Customer Sam Jaya Perkasa"
 
@@ -107,6 +107,23 @@ class TestTaxDocumentReading(_TestCase):
 		r = self._attach(SKT, source="pdf-text", name="skt.pdf", engine=False)
 		self.assertEqual((r.status, r.source, r.kind), ("Auto-applied", "pdf-text", "Letter"))
 		self.assertEqual(self._customer().tax_id, "0987654321012000")
+
+	def test_a_coretax_card_pdf_fills_the_whole_identity_spaces_as_printed(self):
+		r = self._attach(CORETAX, source="pdf-text", name="npwp-coretax.pdf", engine=False)
+		self.assertEqual((r.status, r.kind), ("Auto-applied", "NPWP"))
+		c = self._customer()
+		self.assertEqual((c.tax_id, c.eil_id_type, c.eil_tax_name), ("1000000001234567", "TIN", "CONTOH ELEKTRONIKA UTAMA"))
+		self.assertTrue(c.eil_tax_address.startswith("PLAZA CONTOH BEKASI, LANTAI 7, JL. BULEVAR AHMAD YANI"))
+
+	def test_a_photo_of_a_coretax_card_is_a_suggestion(self):
+		r = self._attach(CORETAX_OCR, name="npwp-coretax.png")
+		self.assertEqual((r.status, r.tax_id), ("Suggested", "1000000001234567"))
+		self.assertIsNone(self._customer().tax_id)
+
+	def test_a_pdf_whose_text_has_no_number_is_read_from_its_picture(self):
+		with mock.patch.object(tax_reader, "read_pixels", return_value=(CORETAX_OCR, "ocr", 0.8)):
+			r = self._attach(["7/13/2021 https://mail.example.com/inbox/attachment", "1/1"], source="pdf-text", name="mail.pdf")
+		self.assertEqual((r.status, r.source, r.tax_id), ("Suggested", "ocr", "1000000001234567"))
 
 	def test_an_image_without_the_engine_fails_loudly_not_silently(self):
 		r = self._attach(NEW_CARD, engine=False)
