@@ -17,6 +17,8 @@ LEGAL_FORMS = (
 	"YAYASAN - BADAN",
 	"KOPERASI - BADAN",
 	"PERKUMPULAN - BADAN",
+	"LEMBAGA DAN BENTUK BADAN LAINNYA",
+	"BUMN/BUMD",
 	"BADAN USAHA MILIK NEGARA",
 	"BADAN USAHA MILIK DAERAH",
 	"BADAN LAYANAN UMUM DAERAH",
@@ -52,6 +54,8 @@ def strip_legal_form(text):
 	and the same for the spaceless form a new card's OCR produces. Spaces the OCR kept are kept."""
 	text = re.sub(r"\s+", " ", (text or "").upper()).strip()
 	for form in LEGAL_FORMS:
+		if form == "BADAN" and text.startswith("BADAN "):
+			continue  # a spaced "BADAN ..." is a name: BADAN PENDIDIKAN TINGGI ...
 		# the form's words with any amount of space (including none) between them
 		pat = r"\s*".join(re.escape(w) for w in form.split(" "))
 		m = re.match(rf"^{pat}\s*[-:.,/]*\s*(.*)$", text)

@@ -20,7 +20,7 @@ from frappe.utils import now_datetime
 
 from erpbio_indonesia_localization.tax_ocr import parser as tax_parser
 from erpbio_indonesia_localization.tax_ocr import reader as tax_reader
-from erpbio_indonesia_localization.tax_ocr.segment import recover_name
+from erpbio_indonesia_localization.tax_ocr.segment import recover_name, strip_legal_form
 
 PARTY_TYPES = ("Customer", "Supplier")
 # reading field -> party field
@@ -146,7 +146,15 @@ def run_reading(reading):
 		path = frappe.get_doc("File", doc.file).get_full_path()
 		lines, source, confidence = _read_lines(path)
 		result = tax_parser.parse(lines, source=source)
-		name, legal_form = recover_name(result["tax_name"]) if result["tax_name"] else ("", None)
+		if not result["tax_id"] and source == "pdf-text" and tax_reader.engine_available():
+			lines, source, confidence = tax_reader.read_pixels(path)  # the number may be in a picture on the page
+			result = tax_parser.parse(lines, source=source)
+		if not result["tax_name"]:
+			name, legal_form = "", None
+		elif source == "pdf-text":
+			name, legal_form = strip_legal_form(result["tax_name"])  # the file's own spaces: nothing to recover
+		else:
+			name, legal_form = recover_name(result["tax_name"])
 		doc.update({
 			"source": source, "confidence": round(confidence, 2), "kind": result["kind"] or None, "verified": int(result["verified"]),
 			"tax_id": result["tax_id"], "id_type": result["id_type"], "tax_name": name or None,
@@ -186,16 +194,16 @@ def _auto_fill(doc):
 	"""Fill what is BLANK on the party from what the document PROVES. Returns the fields written.
 
 	nothing at all   : when the document's number disagrees with the one on record (wrong upload?).
-	number + id type : only a verified number (stated twice, or born-digital PDF).
+	number + id type : only a verified number (stated twice, or born-digital PDF, labelled or on an issued card).
 	name             : verified number on the same document AND the name reads cleanly (no glued
-	                   token the site's vocabulary could not split), or a born-digital PDF.
+	                   token the site's vocabulary could not split; a PDF's own text always does).
 	address          : same conditions as the name.
 	Nothing is written over an existing value, whatever the read says."""
 	if not auto_fill_enabled():
 		return {}
 	fields = _party_fields(doc.party_type)
 	current = _party_values(doc.party_type, doc.party)
-	proven = bool(doc.verified) or doc.source == "pdf-text"
+	proven = bool(doc.verified)
 	if current.get("tax_id") and doc.tax_id and not _same("tax_id", doc.tax_id, current["tax_id"]):
 		return {}  # a document that disagrees on the number is a question, not an answer -- not even for the blanks beside it
 	values = {}
@@ -203,14 +211,19 @@ def _auto_fill(doc):
 		values["tax_id"] = doc.tax_id
 		if doc.id_type and "id_type" in fields:
 			values["id_type"] = doc.id_type  # the pair goes together; a default TIN on an empty record is not information
-	if proven and doc.tax_name and not current.get("tax_name") and "tax_name" in fields and _clean_text(doc.tax_name):
+	if proven and doc.tax_name and not current.get("tax_name") and "tax_name" in fields and _reads_cleanly(doc, doc.tax_name):
 		values["tax_name"] = doc.tax_name
-	if proven and doc.tax_address and not current.get("tax_address") and "tax_address" in fields and _clean_text(doc.tax_address):
+	if proven and doc.tax_address and not current.get("tax_address") and "tax_address" in fields and _reads_cleanly(doc, doc.tax_address):
 		values["tax_address"] = doc.tax_address
 	if not values:
 		return {}
 	_write_party(doc, values, current, auto=True)
 	return values
+
+
+def _reads_cleanly(doc, text):
+	"""A long word in a PDF's own text is a long word (SUKAWARGANEGARA); in an OCR read it is lost spaces."""
+	return doc.source == "pdf-text" or _clean_text(text)
 
 
 def _clean_text(text):
